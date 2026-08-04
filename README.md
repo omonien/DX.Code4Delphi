@@ -15,6 +15,31 @@
 | 🎨 **Syntax Highlighting** | Modern, high-quality **Delphi 13.1** syntax highlighting — all latest language features plus full support for older Delphi code, in `.pas`, `.pp`, `.dpr`, `.dpk`, `.inc`, `.p` and `.int` files. |
 | ⌨️ **Familiar Keybindings** | The **Delphi IDE shortcuts you already know**: `Ctrl+Shift+↓` / `Ctrl+Alt+↓` → interface ↔ implementation, `Ctrl+Shift+↑` / `Ctrl+Alt+↑` → back to declaration, `Alt+↓` / `Alt+↑` → next / previous method. |
 
+## Why Code4Delphi?
+
+There are other Delphi extensions for Visual Studio Code — some of them are very
+powerful, but they often bundle **complex additional features**: language servers,
+project & build tooling, completion engines, dependency analyzers and more. That
+is great when you need all of it — and heavy when you don't.
+
+**Code4Delphi is deliberately lightweight:**
+
+* 🎨 just excellent **syntax highlighting** and
+* ⌨️ the **familiar Delphi keybindings** for fast code navigation —
+* 🪶 **no Language Server (LSP)**, no build integration, no telemetry, **zero
+  runtime dependencies**.
+
+Instead of a language server — a separate process with its own runtime and
+dependencies — Code4Delphi uses a **small, built-in static analyser** that runs
+directly in the extension host. It is purely syntax-based (lexical) and needs
+**no external components**: nothing to download, no server to start, no extra
+memory beyond the document itself. That keeps the extension small, fast to
+install, and instant to activate.
+
+It activates instantly and stays out of your way — the ideal companion when you
+want to **read, review and inspect Delphi code**, for example code written by
+**Claude or other AI agents**.
+
 The logo is the **Delphi helm** (official silhouette, [`media/Logo.svg`](media/Logo.svg)) rendered in the Developer Experts brand blue (`#01A3DA`). Vector sources live in [`docs/`](docs/).
 
 ## Features
@@ -66,7 +91,33 @@ Navigation is **overload-aware**: when a class declares several overloads of the
 * multi-line parameter lists
 * nested local routines are correctly ignored (only top-level routines are navigated)
 
-### 3. Code folding
+Like the Delphi IDE, the navigation commands can use **different keybinding
+styles** — switch them with the `delphi.keybindings.style` setting:
+
+| Style | Go to implementation | Go to declaration | Next / previous method |
+| --- | --- | --- | --- |
+| **Default** | `Ctrl+Shift+↓`, `Ctrl+Alt+↓` | `Ctrl+Shift+↑`, `Ctrl+Alt+↑` | `Alt+↓` / `Alt+↑` |
+| **Emacs** | `Alt+.` *(M-. find-tag)* | `Alt+,` *(M-, pop-tag-mark)* | `Ctrl+Alt+N` / `Ctrl+Alt+P` |
+| **WordStar** | `Ctrl+Q Ctrl+↓` | `Ctrl+Q Ctrl+↑` | `Ctrl+Q Ctrl+N` / `Ctrl+Q Ctrl+P` |
+
+### 3. Selectable color schemes
+
+Code4Delphi ships **four color themes** — pick one in the settings
+(`delphi.colorScheme`) or in the normal theme picker (`Cmd+K` `Cmd+T`):
+
+| Scheme | Look |
+| --- | --- |
+| **Code4Delphi Fancy** | The modern Code4Delphi look (dark) — vivid, hand-tuned colors for the Delphi grammar. |
+| **Code4Delphi Turbo Pascal** | The classic Turbo Pascal IDE editor: navy-blue background, yellow keywords, cyan strings. |
+| **Code4Delphi Delphi Dark** | The Delphi 13 default **dark** editor colors. |
+| **Code4Delphi Delphi Light** | The Delphi 13 default **light** editor colors (blue keywords, red strings/numbers, green comments, teal types). |
+
+All four are **full VS Code themes** (built on compact, self-contained
+Dark+/Light+-style bases — no external theme dependencies), so the whole
+editor — not just Delphi files — matches the selected look. The Delphi token
+colors can be fine-tuned further per theme via `editor.tokenColorCustomizations`.
+
+### 4. Code folding
 
 A folding provider creates fold regions for `interface` / `implementation` / `initialization` / `finalization` sections and for `begin…end`, `case`, `try`, `record` and `class` blocks. `{$REGION}` / `{$ENDREGION}` markers are honored too.
 
@@ -89,6 +140,8 @@ Everything is configurable through settings (`Preferences → Settings → Exten
 | `delphi.navigation.matchOverloads` | `true` | Use parameter types to disambiguate overloads when jumping. |
 | `delphi.navigation.jumpToSection` | `true` | When the cursor is not on a method, jump between the `interface`/`implementation` section headers. |
 | `delphi.navigation.showStatusMessage` | `false` | Show status-bar feedback on navigation. |
+| `delphi.keybindings.style` | `default` | Keybinding style for the navigation commands: `default`, `emacs` or `wordstar`. |
+| `delphi.colorScheme` | `fancy` | Color scheme to activate automatically: `fancy`, `turboPascal`, `delphiDark`, `delphiLight` or `none` (keep your current theme). |
 | `delphi.folding.sections` | `true` | Fold the four unit sections. |
 | `delphi.folding.beginEnd` | `true` | Fold `begin…end` style blocks. |
 

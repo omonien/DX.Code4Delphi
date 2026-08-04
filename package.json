@@ -2,7 +2,7 @@
   "name": "code4delphi",
   "displayName": "Code4Delphi — Delphi Language Support",
   "description": "Code4Delphi: modern, high quality syntax highlighting and Delphi-IDE style code navigation (Ctrl+Shift+Up/Down, Alt+Up/Down) for Delphi 13.1 and all older versions. By Developer Experts, LLC.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "developerexperts",
   "author": "Developer Experts, LLC",
   "license": "MIT",
@@ -38,6 +38,7 @@
     "theme": "dark"
   },
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:delphi"
   ],
   "main": "./src/extension.js",
@@ -72,6 +73,28 @@
         "path": "./syntaxes/delphi.tmLanguage.json"
       }
     ],
+    "themes": [
+      {
+        "label": "Code4Delphi Fancy",
+        "uiTheme": "vs-dark",
+        "path": "./themes/code4delphi-fancy-color-theme.json"
+      },
+      {
+        "label": "Code4Delphi Turbo Pascal",
+        "uiTheme": "vs-dark",
+        "path": "./themes/code4delphi-turbo-pascal-color-theme.json"
+      },
+      {
+        "label": "Code4Delphi Delphi Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/code4delphi-delphi-dark-color-theme.json"
+      },
+      {
+        "label": "Code4Delphi Delphi Light",
+        "uiTheme": "vs",
+        "path": "./themes/code4delphi-delphi-light-color-theme.json"
+      }
+    ],
     "commands": [
       {
         "command": "delphi.goToImplementation",
@@ -98,32 +121,72 @@
       {
         "command": "delphi.goToImplementation",
         "key": "ctrl+shift+down",
-        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'default'"
       },
       {
         "command": "delphi.goToDeclaration",
         "key": "ctrl+shift+up",
-        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'default'"
       },
       {
         "command": "delphi.goToImplementation",
         "key": "ctrl+alt+down",
-        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'default'"
       },
       {
         "command": "delphi.goToDeclaration",
         "key": "ctrl+alt+up",
-        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'default'"
       },
       {
         "command": "delphi.nextMethod",
         "key": "alt+down",
-        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'default'"
       },
       {
         "command": "delphi.previousMethod",
         "key": "alt+up",
-        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'default'"
+      },
+      {
+        "command": "delphi.goToImplementation",
+        "key": "alt+.",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'emacs'"
+      },
+      {
+        "command": "delphi.goToDeclaration",
+        "key": "alt+,",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'emacs'"
+      },
+      {
+        "command": "delphi.nextMethod",
+        "key": "ctrl+alt+n",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'emacs'"
+      },
+      {
+        "command": "delphi.previousMethod",
+        "key": "ctrl+alt+p",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'emacs'"
+      },
+      {
+        "command": "delphi.goToImplementation",
+        "key": "ctrl+q ctrl+down",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'wordstar'"
+      },
+      {
+        "command": "delphi.goToDeclaration",
+        "key": "ctrl+q ctrl+up",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'wordstar'"
+      },
+      {
+        "command": "delphi.nextMethod",
+        "key": "ctrl+q ctrl+n",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'wordstar'"
+      },
+      {
+        "command": "delphi.previousMethod",
+        "key": "ctrl+q ctrl+p",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'wordstar'"
       }
     ],
     "configuration": {
@@ -163,6 +226,40 @@
           "type": "boolean",
           "default": false,
           "description": "Show a status-bar message when a navigation jump succeeds or fails."
+        },
+        "delphi.keybindings.style": {
+          "type": "string",
+          "enum": [
+            "default",
+            "emacs",
+            "wordstar"
+          ],
+          "enumDescriptions": [
+            "Delphi IDE default: Ctrl+Shift+Up/Down, Ctrl+Alt+Up/Down, Alt+Up/Down.",
+            "Emacs-style: Alt+. (find-tag), Alt+, (pop-tag-mark), Ctrl+Alt+N/P (structural next/previous).",
+            "WordStar-style: Ctrl+Q Ctrl+Up/Down (sections), Ctrl+Q Ctrl+N/P (next/previous method)."
+          ],
+          "default": "default",
+          "description": "Keybinding style for the Delphi navigation commands (like the keymap schemes of the Delphi IDE: Default, Emacs, WordStar)."
+        },
+        "delphi.colorScheme": {
+          "type": "string",
+          "enum": [
+            "none",
+            "fancy",
+            "turboPascal",
+            "delphiDark",
+            "delphiLight"
+          ],
+          "enumDescriptions": [
+            "Keep my current color theme (do not switch automatically).",
+            "Code4Delphi Fancy — the modern, vivid Code4Delphi theme (dark).",
+            "Code4Delphi Turbo Pascal — the classic Turbo Pascal IDE look (navy blue, dark).",
+            "Code4Delphi Delphi Dark — Delphi 13 default dark editor colors.",
+            "Code4Delphi Delphi Light — Delphi 13 default light editor colors."
+          ],
+          "default": "fancy",
+          "description": "Select the Code4Delphi color scheme. The matching theme is activated automatically (all four themes are also available in the normal theme picker)."
         },
         "delphi.folding.sections": {
           "type": "boolean",

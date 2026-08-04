@@ -1,0 +1,105 @@
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "Code4Delphi Delphi Light",
+  "type": "light",
+  "include": "./delphi-base-light.json",
+  "colors": {
+    "editor.background": "#ffffff",
+    "editor.foreground": "#000000",
+    "editor.lineHighlightBackground": "#0000000d",
+    "editor.selectionBackground": "#add6ff"
+  },
+  "tokenColors": [
+    {
+      "scope": [
+        "keyword.control.delphi",
+        "keyword.control.section.delphi",
+        "keyword.control.exception.delphi",
+        "keyword.operator.logical.delphi",
+        "storage.type.delphi",
+        "storage.type.function.delphi"
+      ],
+      "settings": { "foreground": "#0000ff" }
+    },
+    {
+      "scope": [
+        "keyword.operator.delphi",
+        "keyword.operator.assignment.delphi",
+        "keyword.operator.range.delphi"
+      ],
+      "settings": { "foreground": "#000000" }
+    },
+    { "scope": "storage.modifier.delphi", "settings": { "foreground": "#008080" } },
+    { "scope": "storage.type.parameter.delphi", "settings": { "foreground": "#000000", "fontStyle": "italic" } },
+    { "scope": "support.type.primitive.delphi", "settings": { "foreground": "#008080" } },
+    { "scope": "support.function.builtin.delphi", "settings": { "foreground": "#0000c8" } },
+    { "scope": "entity.name.function.delphi", "settings": { "foreground": "#0000c8" } },
+    {
+      "scope": [
+        "entity.name.type.delphi",
+        "meta.type-parameter.delphi"
+      ],
+      "settings": { "foreground": "#008080" }
+    },
+    { "scope": "entity.name.variable.property.delphi", "settings": { "foreground": "#000000", "fontStyle": "bold" } },
+    {
+      "scope": [
+        "entity.other.attribute-name.delphi",
+        "meta.attribute.delphi"
+      ],
+      "settings": { "foreground": "#800080" }
+    },
+    {
+      "scope": [
+        "string.quoted.single.delphi",
+        "string.quoted.triple.delphi"
+      ],
+      "settings": { "foreground": "#c00000" }
+    },
+    {
+      "scope": [
+        "constant.character.escape.delphi",
+        "constant.character.numeric.delphi",
+        "constant.character.numeric.hex.delphi"
+      ],
+      "settings": { "foreground": "#c00000" }
+    },
+    {
+      "scope": [
+        "constant.numeric.hex.delphi",
+        "constant.numeric.binary.delphi",
+        "constant.numeric.float.delphi",
+        "constant.numeric.integer.delphi"
+      ],
+      "settings": { "foreground": "#b00000" }
+    },
+    { "scope": "constant.language.delphi", "settings": { "foreground": "#0000ff" } },
+    {
+      "scope": [
+        "comment.line.double-slash.delphi",
+        "comment.block.delphi",
+        "comment.block.pascal.delphi"
+      ],
+      "settings": { "foreground": "#008000", "fontStyle": "italic" }
+    },
+    {
+      "scope": "meta.preprocessor.delphi",
+      "settings": { "foreground": "#808080", "fontStyle": "italic" }
+    },
+    {
+      "scope": "keyword.other.preprocessor.directive.delphi",
+      "settings": { "foreground": "#800080", "fontStyle": "italic" }
+    },
+    { "scope": "constant.other.directive-option.delphi", "settings": { "foreground": "#0000ff" } },
+    {
+      "scope": [
+        "punctuation.terminator.statement.delphi",
+        "punctuation.separator.delphi",
+        "punctuation.accessor.delphi",
+        "punctuation.definition.delphi",
+        "punctuation.separator.type.delphi"
+      ],
+      "settings": { "foreground": "#808080" }
+    }
+  ]
+}

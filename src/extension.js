@@ -10,6 +10,29 @@ const {
   previousMethod,
 } = require('./commands.js');
 
+const THEME_BY_SCHEME = {
+  fancy: 'Code4Delphi Fancy',
+  turboPascal: 'Code4Delphi Turbo Pascal',
+  delphiDark: 'Code4Delphi Delphi Dark',
+  delphiLight: 'Code4Delphi Delphi Light',
+};
+
+/**
+ * Activate the color theme matching `delphi.colorScheme`.
+ * `none` leaves the user's current theme untouched.
+ */
+function applyColorScheme() {
+  const scheme = getConfig().colorScheme;
+  const theme = THEME_BY_SCHEME[scheme];
+  if (!theme) {
+    return;
+  }
+  vscode.workspace
+    .getConfiguration('workbench')
+    .update('colorTheme', theme, vscode.ConfigurationTarget.Global)
+    .then(undefined, () => { /* ignore errors (e.g. read-only settings) */ });
+}
+
 function activate(context) {
   const nav = getConfig().navigation;
 
@@ -35,7 +58,15 @@ function activate(context) {
     )
   );
 
-  return;
+  // Color scheme selection
+  applyColorScheme();
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('delphi.colorScheme')) {
+        applyColorScheme();
+      }
+    })
+  );
 }
 
 function deactivate() {

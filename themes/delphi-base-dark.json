@@ -1,0 +1,90 @@
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "Code4Delphi Base Dark",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1e1e1e",
+    "editor.foreground": "#d4d4d4",
+    "editor.lineHighlightBackground": "#ffffff0d",
+    "editor.selectionBackground": "#264f78",
+    "editor.selectionHighlightBackground": "#add6ff26",
+    "editorCursor.foreground": "#aeafad",
+    "editorLineNumber.foreground": "#858585",
+    "editorLineNumber.activeForeground": "#c6c6c6",
+    "editorIndentGuide.background1": "#404040"
+  },
+  "tokenColors": [
+    { "scope": ["comment", "punctuation.definition.comment"], "settings": { "foreground": "#6a9955" } },
+    {
+      "scope": [
+        "keyword.control",
+        "keyword.other.using",
+        "keyword.other.operator"
+      ],
+      "settings": { "foreground": "#c586c0" }
+    },
+    { "scope": ["keyword.operator"], "settings": { "foreground": "#d4d4d4" } },
+    {
+      "scope": [
+        "storage.type",
+        "storage.modifier",
+        "keyword.other.unit"
+      ],
+      "settings": { "foreground": "#569cd6" }
+    },
+    {
+      "scope": [
+        "string",
+        "string.quoted",
+        "string.regexp"
+      ],
+      "settings": { "foreground": "#ce9178" }
+    },
+    {
+      "scope": [
+        "constant.numeric",
+        "constant.other.color"
+      ],
+      "settings": { "foreground": "#b5cea8" }
+    },
+    { "scope": ["constant.language"], "settings": { "foreground": "#569cd6" } },
+    { "scope": ["constant.character.escape"], "settings": { "foreground": "#d7ba7d" } },
+    {
+      "scope": [
+        "entity.name.function",
+        "support.function"
+      ],
+      "settings": { "foreground": "#dcdcaa" }
+    },
+    {
+      "scope": [
+        "support.class",
+        "support.type",
+        "entity.name.type",
+        "entity.name.namespace",
+        "entity.other.inherited-class"
+      ],
+      "settings": { "foreground": "#4ec9b0" }
+    },
+    { "scope": ["entity.name.tag"], "settings": { "foreground": "#569cd6" } },
+    {
+      "scope": [
+        "variable",
+        "entity.name.variable",
+        "support.variable"
+      ],
+      "settings": { "foreground": "#9cdcfe" }
+    },
+    { "scope": ["entity.other.attribute-name"], "settings": { "foreground": "#4fc1ff" } },
+    {
+      "scope": [
+        "punctuation",
+        "meta.brace",
+        "meta.delimiter"
+      ],
+      "settings": { "foreground": "#808080" }
+    },
+    { "scope": ["meta.preprocessor"], "settings": { "foreground": "#9cdcfe" } },
+    { "scope": ["meta.embedded"], "settings": { "foreground": "#d4d4d4" } }
+  ]
+}

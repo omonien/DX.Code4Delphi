@@ -16,12 +16,14 @@ class Range {
 
 const registeredCommands = [];
 const registeredProviders = [];
+const workbenchUpdates = [];
 
 const vscodeMock = {
   Position,
   Selection,
   Range,
   TextEditorRevealType: { InMiddle: 1 },
+  ConfigurationTarget: { Global: 1, Workspace: 2 },
   commands: {
     registerTextEditorCommand: (id, fn) => {
       registeredCommands.push({ id, fn });
@@ -38,22 +40,36 @@ const vscodeMock = {
     setStatusBarMessage: () => ({ dispose() {} }),
   },
   workspace: {
-    getConfiguration: () => ({
-      get: (key, def) => {
-        const defaults = {
-          'navigation.enabled': true,
-          'navigation.goToImplementation': true,
-          'navigation.goToDeclaration': true,
-          'navigation.nextPreviousMethod': true,
-          'navigation.matchOverloads': true,
-          'navigation.jumpToSection': true,
-          'navigation.showStatusMessage': false,
-          'folding.sections': true,
-          'folding.beginEnd': true,
+    getConfiguration: (section) => {
+      if (section === 'workbench') {
+        return {
+          get: () => undefined,
+          update: (key, value, target) => {
+            workbenchUpdates.push({ key, value, target });
+            return Promise.resolve();
+          },
         };
-        return key in defaults ? defaults[key] : def;
-      },
-    }),
+      }
+      return {
+        get: (key, def) => {
+          const defaults = {
+            'navigation.enabled': true,
+            'navigation.goToImplementation': true,
+            'navigation.goToDeclaration': true,
+            'navigation.nextPreviousMethod': true,
+            'navigation.matchOverloads': true,
+            'navigation.jumpToSection': true,
+            'navigation.showStatusMessage': false,
+            'keybindings.style': 'default',
+            'colorScheme': 'fancy',
+            'folding.sections': true,
+            'folding.beginEnd': true,
+          };
+          return key in defaults ? defaults[key] : def;
+        },
+      };
+    },
+    onDidChangeConfiguration: () => ({ dispose() {} }),
   },
 };
 
@@ -85,4 +101,11 @@ test('activation registers the folding provider for delphi', () => {
 test('registered command handlers are callable', () => {
   const handler = registeredCommands.find((c) => c.id === 'delphi.goToImplementation').fn;
   assert.equal(typeof handler, 'function');
+});
+
+test('activation applies the configured color scheme to the workbench theme', () => {
+  const update = workbenchUpdates.find((u) => u.key === 'colorTheme');
+  assert.ok(update, 'workbench.colorTheme must be updated');
+  assert.equal(update.value, 'Code4Delphi Fancy'); // default scheme = fancy
+  assert.equal(update.target, vscodeMock.ConfigurationTarget.Global);
 });

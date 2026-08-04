@@ -14,6 +14,10 @@ function getConfig() {
       jumpToSection: cfg.get('navigation.jumpToSection', true),
       showStatusMessage: cfg.get('navigation.showStatusMessage', false),
     },
+    keybindings: {
+      style: cfg.get('keybindings.style', 'default'),
+    },
+    colorScheme: cfg.get('colorScheme', 'fancy'),
     folding: {
       sections: cfg.get('folding.sections', true),
       beginEnd: cfg.get('folding.beginEnd', true),
