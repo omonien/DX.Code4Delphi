@@ -9,7 +9,8 @@
         "keyword.operator.logical.delphi"
       ],
       "settings": {
-        "foreground": "#569cd6"
+        "foreground": "#569cd6",
+        "fontStyle": "bold"
       }
     },
     {
@@ -29,13 +30,15 @@
         "storage.type.parameter.delphi"
       ],
       "settings": {
-        "foreground": "#569cd6"
+        "foreground": "#569cd6",
+        "fontStyle": "bold"
       }
     },
     {
       "scope": "storage.modifier.delphi",
       "settings": {
-        "foreground": "#dcdcaa"
+        "foreground": "#dcdcaa",
+        "fontStyle": "bold"
       }
     },
     {

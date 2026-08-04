@@ -144,6 +144,7 @@ function previousMethod(editor) {
 /** Command palette: pick a Delphi syntax color scheme (Quick Pick). */
 function selectColorScheme() {
   const items = [
+    { label: 'Auto (Dark / Light)', description: 'Follow my VS Code theme: Delphi Dark or Delphi Light automatically', value: 'auto' },
     { label: 'None', description: 'Use the colors of my current VS Code theme', value: 'none' },
     { label: 'Code4Delphi Fancy', description: 'Vivid, hand-tuned Delphi syntax colors', value: 'fancy' },
     { label: 'Code4Delphi Turbo Pascal', description: 'Classic Turbo Pascal IDE syntax colors', value: 'turboPascal' },

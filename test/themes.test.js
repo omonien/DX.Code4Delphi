@@ -90,8 +90,8 @@ test('package.json defines the schemes, commands and three keybinding styles', (
   const styleSetting = pkg.contributes.configuration.properties['delphi.keybindings.style'];
   assert.deepEqual(styleSetting.enum, ['default', 'emacs', 'wordstar']);
   const schemeSetting = pkg.contributes.configuration.properties['delphi.colorScheme'];
-  assert.deepEqual(schemeSetting.enum, ['none', 'fancy', 'turboPascal', 'delphiDark', 'delphiLight']);
-  assert.equal(schemeSetting.default, 'none');
+  assert.deepEqual(schemeSetting.enum, ['auto', 'none', 'fancy', 'turboPascal', 'delphiDark', 'delphiLight']);
+  assert.equal(schemeSetting.default, 'auto');
 
   // every scheme enum value (except none) has a theme file with rules
   for (const value of ['fancy', 'turboPascal', 'delphiDark', 'delphiLight']) {

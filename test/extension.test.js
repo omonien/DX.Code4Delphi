@@ -24,6 +24,7 @@ const vscodeMock = {
   Range,
   TextEditorRevealType: { InMiddle: 1 },
   ConfigurationTarget: { Global: 1, Workspace: 2 },
+  ColorThemeKind: { Light: 1, Dark: 2, HighContrast: 3, HighContrastLight: 4 },
   commands: {
     registerTextEditorCommand: (id, fn) => {
       registeredCommands.push({ id, fn });
@@ -42,6 +43,9 @@ const vscodeMock = {
   },
   window: {
     setStatusBarMessage: () => ({ dispose() {} }),
+    showQuickPick: () => Promise.resolve(null),
+    activeColorTheme: { kind: 2 }, // Dark
+    onDidChangeActiveColorTheme: () => ({ dispose() {} }),
   },
   workspace: {
     getConfiguration: (section) => {
@@ -68,7 +72,7 @@ const vscodeMock = {
             'navigation.jumpToSection': true,
             'navigation.showStatusMessage': false,
             'keybindings.style': 'default',
-            'colorScheme': 'fancy',
+            'colorScheme': 'auto',
             'folding.sections': true,
             'folding.beginEnd': true,
           };
@@ -123,4 +127,15 @@ test('activation applies the syntax color scheme via Delphi-scoped token colors'
     assert.ok(scopes.every((s) => s.endsWith('.delphi')), `delphi-scoped rule expected: ${JSON.stringify(scopes)}`);
   }
   assert.equal(update.target, vscodeMock.ConfigurationTarget.Global);
+});
+
+test('auto scheme follows the active theme kind (dark -> Delphi Dark)', () => {
+  const rules = delphiConfigUpdates.find((u) => u.key === 'tokenColorCustomizations').value.textMateRules;
+  const keyword = rules.find((r) => Array.isArray(r.scope) && r.scope.includes('keyword.control.delphi'));
+  assert.ok(keyword, 'keyword rule present');
+  assert.equal(keyword.settings.foreground, '#569cd6', 'Delphi Dark keyword color');
+  assert.equal(keyword.settings.fontStyle, 'bold', 'keywords bold in Delphi Dark');
+  const property = rules.find((r) => r.scope === 'entity.name.variable.property.delphi');
+  assert.ok(property, 'property rule present');
+  assert.ok(!property.settings.fontStyle || property.settings.fontStyle === 'normal', 'property names must not be bold');
 });

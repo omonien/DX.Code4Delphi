@@ -11,7 +11,8 @@
         "storage.type.function.delphi"
       ],
       "settings": {
-        "foreground": "#0000ff"
+        "foreground": "#0000ff",
+        "fontStyle": "bold"
       }
     },
     {
@@ -27,7 +28,8 @@
     {
       "scope": "storage.modifier.delphi",
       "settings": {
-        "foreground": "#008080"
+        "foreground": "#008080",
+        "fontStyle": "bold"
       }
     },
     {
@@ -67,8 +69,7 @@
     {
       "scope": "entity.name.variable.property.delphi",
       "settings": {
-        "foreground": "#000000",
-        "fontStyle": "bold"
+        "foreground": "#000000"
       }
     },
     {

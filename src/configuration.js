@@ -17,7 +17,7 @@ function getConfig() {
     keybindings: {
       style: cfg.get('keybindings.style', 'default'),
     },
-    colorScheme: cfg.get('colorScheme', 'fancy'),
+    colorScheme: cfg.get('colorScheme', 'auto'),
     folding: {
       sections: cfg.get('folding.sections', true),
       beginEnd: cfg.get('folding.beginEnd', true),

@@ -108,8 +108,12 @@ pick one via the setting `delphi.colorScheme` or the command palette
 | --- | --- |
 | **Code4Delphi Fancy** | The modern Code4Delphi look — vivid, hand-tuned colors for the Delphi grammar. |
 | **Code4Delphi Turbo Pascal** | The classic Turbo Pascal IDE syntax colors (navy, yellow keywords, cyan strings). |
-| **Code4Delphi Delphi Dark** | The Delphi 13 default **dark** editor syntax colors. |
-| **Code4Delphi Delphi Light** | The Delphi 13 default **light** editor syntax colors (blue keywords, red strings/numbers, green comments, teal types). |
+| **Code4Delphi Delphi Dark** | The Delphi 13 default **dark** editor syntax colors (bold light-blue keywords). |
+| **Code4Delphi Delphi Light** | The Delphi 13 default **light** editor syntax colors (bold blue keywords, red strings/numbers, green comments, teal types). |
+
+The default is **`auto`**: Code4Delphi detects whether your VS Code theme is
+light or dark and picks *Delphi Light* or *Delphi Dark* accordingly — and
+follows along automatically when you switch themes.
 
 The schemes affect **only the Delphi syntax highlighting** — your global VS Code
 theme is never changed. The selected scheme's rules are written to
@@ -142,7 +146,7 @@ Everything is configurable through settings (`Preferences → Settings → Exten
 | `delphi.navigation.jumpToSection` | `true` | When the cursor is not on a method, jump between the `interface`/`implementation` section headers. |
 | `delphi.navigation.showStatusMessage` | `false` | Show status-bar feedback on navigation. |
 | `delphi.keybindings.style` | `default` | Keybinding style for the navigation commands: `default`, `emacs` or `wordstar`. |
-| `delphi.colorScheme` | `none` | Syntax color scheme for Delphi files only (global theme untouched): `fancy`, `turboPascal`, `delphiDark`, `delphiLight` or `none`. |
+| `delphi.colorScheme` | `auto` | Syntax color scheme for Delphi files only (global theme untouched): `auto` (follows your light/dark theme), `fancy`, `turboPascal`, `delphiDark`, `delphiLight` or `none`. |
 | `delphi.folding.sections` | `true` | Fold the four unit sections. |
 | `delphi.folding.beginEnd` | `true` | Fold `begin…end` style blocks. |
 

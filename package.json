@@ -2,7 +2,7 @@
   "name": "code4delphi",
   "displayName": "Code4Delphi — Delphi Language Support",
   "description": "Code4Delphi: modern, high quality syntax highlighting and Delphi-IDE style code navigation (Ctrl+Shift+Up/Down, Alt+Up/Down) for Delphi 13.1 and all older versions. By Developer Experts, LLC.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "developerexperts",
   "author": "Developer Experts, LLC",
   "license": "MIT",
@@ -233,6 +233,7 @@
         "delphi.colorScheme": {
           "type": "string",
           "enum": [
+            "auto",
             "none",
             "fancy",
             "turboPascal",
@@ -240,13 +241,14 @@
             "delphiLight"
           ],
           "enumDescriptions": [
+            "Follow my VS Code theme automatically: Delphi Dark when my theme is dark, Delphi Light when it is light.",
             "No custom colors — Delphi is highlighted by your current VS Code theme.",
             "Code4Delphi Fancy — vivid, hand-tuned Delphi syntax colors.",
             "Code4Delphi Turbo Pascal — the classic Turbo Pascal IDE syntax colors (navy, yellow keywords, cyan strings).",
             "Code4Delphi Delphi Dark — Delphi 13 default dark editor syntax colors.",
             "Code4Delphi Delphi Light — Delphi 13 default light editor syntax colors."
           ],
-          "default": "none",
+          "default": "auto",
           "description": "Color scheme for the Delphi **syntax highlighting** only. The global VS Code theme is never changed — the selected scheme's colors are applied to Delphi files via per-language token colors (also available from the command palette: 'Code4Delphi: Select Color Scheme')."
         },
         "delphi.folding.sections": {

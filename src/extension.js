@@ -22,6 +22,22 @@ const SCHEME_FILE = {
 };
 
 /**
+ * Resolve the effective scheme. `auto` follows the user's current VS Code
+ * theme kind: dark themes → Delphi Dark, light themes → Delphi Light.
+ */
+function resolveScheme(scheme) {
+  if (scheme !== 'auto') {
+    return scheme;
+  }
+  const kind = vscode.window.activeColorTheme
+    ? vscode.window.activeColorTheme.kind
+    : vscode.ColorThemeKind.Dark;
+  return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight
+    ? 'delphiLight'
+    : 'delphiDark';
+}
+
+/**
  * Apply the selected syntax color scheme for Delphi files only.
  *
  * The scheme's token rules are written to `editor.tokenColorCustomizations`
@@ -31,7 +47,7 @@ const SCHEME_FILE = {
  * stay untouched. Existing user rules with non-Delphi scopes are preserved.
  */
 function applyColorScheme() {
-  const scheme = getConfig().colorScheme;
+  const scheme = resolveScheme(getConfig().colorScheme);
   const file = SCHEME_FILE[scheme];
   let schemeRules = [];
   if (file) {
@@ -94,6 +110,12 @@ function activate(context) {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('delphi.colorScheme')) {
+        applyColorScheme();
+      }
+    }),
+    vscode.window.onDidChangeActiveColorTheme(() => {
+      // `auto` must follow the user when they switch between light/dark themes
+      if (getConfig().colorScheme === 'auto') {
         applyColorScheme();
       }
     })
