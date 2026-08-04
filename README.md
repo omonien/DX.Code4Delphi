@@ -40,8 +40,6 @@ It activates instantly and stays out of your way — the ideal companion when yo
 want to **read, review and inspect Delphi code**, for example code written by
 **Claude or other AI agents**.
 
-The logo is the **Delphi helm** (official silhouette, [`media/Logo.svg`](media/Logo.svg)) rendered in the Developer Experts brand blue (`#01A3DA`). Vector sources live in [`docs/`](docs/).
-
 ## Features
 
 ### 1. High-quality syntax highlighting
