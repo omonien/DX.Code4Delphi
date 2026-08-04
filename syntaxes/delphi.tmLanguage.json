@@ -1,0 +1,277 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Delphi",
+  "scopeName": "source.delphi",
+  "fileTypes": ["pas", "pp", "dpr", "dpk", "inc", "p", "int"],
+  "patterns": [
+    { "include": "#compiler-directives" },
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#char-codes" },
+    { "include": "#numbers" },
+    { "include": "#attributes" },
+    { "include": "#type-parameters" },
+    { "include": "#type-declarations" },
+    { "include": "#method-declarations" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#builtin-functions" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "compiler-directives": {
+      "patterns": [
+        {
+          "begin": "\\{\\$",
+          "end": "\\}",
+          "name": "meta.preprocessor.delphi",
+          "patterns": [
+            {
+              "match": "\\b(IFDEF|IFNDEF|IF|ELSE|ELSEIF|ENDIF|IFEND|DEFINE|UNDEF|INCLUDE|RESOURCE|WARN|MESSAGE|HINT|HINTS|WARNINGS|OPTIMIZATION|ALIGN|MINENUMSIZE|STRINGCHECKS|RANGECHECKS|OVERFLOWCHECKS|BOOLEVAL|LONGSTRINGS|IOCHECKS|WRITEABLECONST|METHODINFO|TYPEINFO|DEBUGINFO|LOCALSYMBOLS|REFERENCEINFO|SAFEDIVIDE|VARSTRINGCHECKS|WEAKPACKAGEUNIT|IMPLICITBUILD|DESIGNONLY|RUNONLY|LIBPREFIX|LIBSUFFIX|LIBVERSION|SCOPEDENUMS|ZEROBASEDSTRINGS|POINTERMATH|EXCESSPRECISION|EXTERNALSYM|SUPPRESS_WARNINGS|DENYPACKAGEUNIT|NOINCLUDE|STRONGLINKTYPES|MODELFRAMEWORK|REGION|ENDREGION)\\b",
+              "name": "constant.other.directive-option.delphi"
+            },
+            {
+              "match": "\\b(TRUE|FALSE|DEFINED|DECLARED|VER150|VER160|VER170|VER180|VER185|VER190|VER200|VER210|VER220|VER230|VER240|VER250|VER260|VER270|VER280|VER290|VER300|VER310|VER320|VER330|VER340|VER350|VER360|VER370|VER380|VER390|VER400|WIN32|WIN64|MSWINDOWS|LINUX|MACOS|ANDROID|IOS|CPUX86|CPUX64|CPUARM|CPUARM64|POSIX|NEXTGEN|FPC|UNICODE|CONSOLE|DEBUG)\\b",
+              "name": "constant.language.delphi"
+            },
+            {
+              "match": "'(?:''|[^'])*'",
+              "name": "string.quoted.single.delphi"
+            },
+            {
+              "match": "\\b[A-Za-z][A-Za-z0-9]*\\b",
+              "name": "keyword.other.preprocessor.directive.delphi"
+            }
+          ]
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "match": "//[^\\n]*",
+          "name": "comment.line.double-slash.delphi"
+        },
+        {
+          "match": "\\(\\*[\\s\\S]*?\\*\\)",
+          "name": "comment.block.pascal.delphi"
+        },
+        {
+          "match": "\\{[^$][\\s\\S]*?\\}",
+          "name": "comment.block.delphi"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "'''",
+          "end": "'''",
+          "name": "string.quoted.triple.delphi",
+          "patterns": [
+            {
+              "match": "''",
+              "name": "constant.character.escape.delphi"
+            }
+          ]
+        },
+        {
+          "match": "'(?:''|[^'])*'",
+          "name": "string.quoted.single.delphi"
+        }
+      ]
+    },
+    "char-codes": {
+      "patterns": [
+        {
+          "match": "#\\$[0-9A-Fa-f]+",
+          "name": "constant.character.numeric.hex.delphi"
+        },
+        {
+          "match": "#[0-9]+",
+          "name": "constant.character.numeric.delphi"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\$[0-9A-Fa-f_]+",
+          "name": "constant.numeric.hex.delphi"
+        },
+        {
+          "match": "%[01_]+",
+          "name": "constant.numeric.binary.delphi"
+        },
+        {
+          "match": "\\b\\d[\\d_]*\\.\\d[\\d_]*(?:[eE][+-]?\\d+)?",
+          "name": "constant.numeric.float.delphi"
+        },
+        {
+          "match": "\\b\\d[\\d_]*(?:[eE][+-]?\\d+)?",
+          "name": "constant.numeric.integer.delphi"
+        }
+      ]
+    },
+    "attributes": {
+      "begin": "(?<![A-Za-z0-9_\\]\\)])\\[([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)?)",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.other.attribute-name.delphi"
+        }
+      },
+      "end": "\\]",
+      "name": "meta.attribute.delphi"
+    },
+    "type-parameters": {
+      "match": "<[A-Za-z_][A-Za-z0-9_]*(?:\\s*,\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*:\\s*[A-Za-z_][A-Za-z0-9_]*)?>",
+      "name": "meta.type-parameter.delphi",
+      "captures": {
+        "0": {
+          "name": "entity.name.type.delphi"
+        }
+      }
+    },
+    "type-declarations": {
+      "patterns": [
+        {
+          "match": "^\\s*([A-Za-z_][A-Za-z0-9_]*)(<[^>]+>)?\\s*=\\s*(packed\\s+)?(class|dispinterface|interface|record|object|helper)\\b",
+          "captures": {
+            "1": { "name": "entity.name.type.delphi" },
+            "2": { "name": "entity.name.type.delphi" },
+            "4": { "name": "storage.type.delphi" }
+          }
+        },
+        {
+          "match": "\\btype\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=",
+          "captures": {
+            "1": { "name": "entity.name.type.delphi" }
+          }
+        }
+      ]
+    },
+    "method-declarations": {
+      "patterns": [
+        {
+          "match": "\\b(class\\s+|sealed\\s+|static\\s+)?(procedure|function|constructor|destructor|operator)\\s+([A-Za-z_][A-Za-z0-9_]*\\s*(?:<[^>]+>)?)(\\.)([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.modifier.delphi" },
+            "2": { "name": "storage.type.function.delphi" },
+            "3": { "name": "entity.name.type.delphi" },
+            "4": { "name": "punctuation.accessor.delphi" },
+            "5": { "name": "entity.name.function.delphi" }
+          }
+        },
+        {
+          "match": "\\b(class\\s+|sealed\\s+|static\\s+)?(procedure|function|constructor|destructor|operator)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.modifier.delphi" },
+            "2": { "name": "storage.type.function.delphi" },
+            "3": { "name": "entity.name.function.delphi" }
+          }
+        },
+        {
+          "match": "\\bproperty\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+          "captures": {
+            "1": { "name": "entity.name.variable.property.delphi" }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "(?<=[(,;]\\s*)(const|var|out)(?=\\s+[A-Za-z_])",
+          "captures": {
+            "1": { "name": "storage.type.parameter.delphi" }
+          }
+        },
+        {
+          "match": "\\b(and|as|div|in|is|mod|not|or|shl|shr|xor)\\b",
+          "name": "keyword.operator.logical.delphi"
+        },
+        {
+          "match": "\\b(begin|case|do|downto|else|end|for|goto|if|label|repeat|then|to|until|while|with|asm)\\b",
+          "name": "keyword.control.delphi"
+        },
+        {
+          "match": "\\b(try|except|finally|raise|on)\\b",
+          "name": "keyword.control.exception.delphi"
+        },
+        {
+          "match": "\\b(unit|program|library|package|interface|implementation|initialization|finalization|uses|type|var|const|resourcestring|threadvar|exports|requires|contains)\\b",
+          "name": "keyword.control.section.delphi"
+        },
+        {
+          "match": "\\b(procedure|function|constructor|destructor|operator|property|class|record|object|packed|set|array|file|absolute)\\b",
+          "name": "storage.type.delphi"
+        },
+        {
+          "match": "\\b(public|protected|private|published|automated|strict|sealed|static|abstract|virtual|dynamic|override|reintroduce|overload|final|inline|helper|reference|deprecated|platform|experimental)\\b",
+          "name": "storage.modifier.delphi"
+        },
+        {
+          "match": "\\b(register|cdecl|stdcall|safecall|pascal|fastcall|winapi|varargs|external|forward|export|dispid|assembler|far|near|name|index|read|write|readonly|writeonly|stored|default|nodefault|implements|message|of|out)\\b",
+          "name": "storage.modifier.delphi"
+        },
+        {
+          "match": "\\b(nil|true|false|self|result)\\b",
+          "name": "constant.language.delphi"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "match": "(?i)\\b(AnsiChar|WideChar|Char|Byte|ShortInt|SmallInt|Word|LongInt|LongWord|Integer|Cardinal|Int64|UInt64|NativeInt|NativeUInt|Single|Double|Extended|Real|Real48|Comp|Currency|Boolean|ByteBool|WordBool|LongBool|ShortString|AnsiString|UnicodeString|WideString|RawByteString|UTF8String|String|Variant|OleVariant|TextFile|OpenString|Pointer|PAnsiChar|PWideChar|PChar|PByte|PInteger|PNativeInt|PPointer|TObject|TClass|TPersistent|TComponent|TInterfacedObject|TInterfacedPersistent|TInterfaceList|TStrings|TStringList|TStringBuilder|TList|TObjectList|TArray|TDictionary|TThread|TStream|TFileStream|TMemoryStream|TStringStream|TBytesStream|TCustomAttribute|TNotifyEvent|TGetStrProc|TProc|TThreadProcedure|TFunc|TPredicate|TValue|TVarRec|TGUID|TDateTime|TDate|TTime|IInterface|IUnknown|IDispatch|IEnumerator|IEnumerable|IServiceProvider|Exception|IReadOnlyList|IList|IDictionary|ICollection|IComparer|IEqualityComparer)\\b",
+          "name": "support.type.primitive.delphi"
+        }
+      ]
+    },
+    "builtin-functions": {
+      "match": "\\b(Length|SetLength|Copy|Delete|Insert|Pos|PosEx|Inc|Dec|High|Low|Ord|Chr|Pred|Succ|Round|Trunc|Int|Frac|Abs|Sqr|Sqrt|Sin|Cos|Tan|ArcTan|Exp|Ln|Str|Val|IntToStr|StrToInt|StrToIntDef|StrToInt64|StrToInt64Def|StrToFloat|FloatToStr|FloatToStrF|Format|FormatFloat|FormatDateTime|UpperCase|LowerCase|AnsiUpperCase|AnsiLowerCase|CompareStr|CompareText|AnsiCompareStr|AnsiCompareText|SameText|Trim|TrimLeft|TrimRight|Now|Date|Time|Random|Randomize|Assert|GetMem|FreeMem|New|Dispose|SizeOf|TypeInfo|TypeOf|Default|Hi|Lo|Min|Max|Exclude|Include|FillChar|Move|Addr|ReallocMem|StrLen|StrCat|StrCopy|StrPos|IsInheritedFrom|GetInterface|QueryInterface|AddRef|Release|Inherited|Initialize|Finalize|SetString|SetLength|UniqueString|Concat|Swap|Odd|Even|Succ|Pred|BoolToStr|StrToBool|FloatToStr|VarToStr|VarType|VarIsNull|VarIsEmpty|Assigned|Supports|GetOrdValue|SetOrdValue|ParamStr|ParamCount|FileExists|DirectoryExists|ExtractFileName|ExtractFilePath|ExtractFileExt|ChangeFileExt|IncludeTrailingPathDelimiter|ExcludeTrailingPathDelimiter|SameFileName|ForceDirectories|CreateDir|RemoveDir|DeleteFile|RenameFile|GetCurrentDir|SetCurrentDir|GetEnvironmentVariable|Sleep|Beep|MessageDlg|ShowMessage|InputQuery|InputBox|FreeAndNil|Align|CompareMem|DisposeStr|NewStr|ToDouble|ToSingle|ToInteger|ToString|ToBoolean|IsEmpty|IsNull|InheritsFrom|Dispatch|FieldAddress|MethodAddress|MethodName|UnitName|ClassName|ClassNameIs|ClassParent|ClassInfo|InstanceSize|BeginUpdate|EndUpdate|IndexOf|IndexOfName|Names|Values|Clear|Add|Delete|Insert|Sort|Exchange|Move|LoadFromFile|SaveToFile|LoadFromStream|SaveToStream|Create|Destroy|Free|Show|Hide|Close|Execute|Terminate|WaitFor|Synchronize|Queue|Assign|Append|Rewrite|Reset|Read|ReadLn|Write|WriteLn|CloseFile|Eof|Eoln|Seek|FileSize|FilePos|Truncate|BlockRead|BlockWrite|Flush|SeekEof|SeekEoln)\\b",
+      "name": "support.function.builtin.delphi"
+    },
+    "operators": {
+      "patterns": [
+        {
+          "match": ":=|<=|>=|<>|<<|>>|\\+\\+|--|\\*\\*|->|=>",
+          "name": "keyword.operator.assignment.delphi"
+        },
+        {
+          "match": "\\.\\.",
+          "name": "keyword.operator.range.delphi"
+        },
+        {
+          "match": "[+\\-*/=<>@^]",
+          "name": "keyword.operator.delphi"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "match": ";",
+          "name": "punctuation.terminator.statement.delphi"
+        },
+        {
+          "match": ",",
+          "name": "punctuation.separator.delphi"
+        },
+        {
+          "match": "\\.",
+          "name": "punctuation.accessor.delphi"
+        },
+        {
+          "match": "[\\(\\)\\[\\]]",
+          "name": "punctuation.definition.delphi"
+        },
+        {
+          "match": ":",
+          "name": "punctuation.separator.type.delphi"
+        }
+      ]
+    }
+  }
+}

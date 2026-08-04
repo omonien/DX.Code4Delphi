@@ -1,0 +1,180 @@
+{
+  "name": "delphi-language",
+  "displayName": "Delphi — High Quality Language Support",
+  "description": "Modern, high quality syntax highlighting and Delphi-IDE style code navigation (Ctrl+Shift+Up/Down, Alt+Up/Down) for Delphi 13.1 and all older versions.",
+  "version": "1.0.0",
+  "publisher": "code4delphi",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Snippets"
+  ],
+  "keywords": [
+    "delphi",
+    "pascal",
+    "object pascal",
+    "embarcadero",
+    "rad studio",
+    "language",
+    "syntax"
+  ],
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#e11f26",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onLanguage:delphi"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "delphi",
+        "aliases": [
+          "Delphi",
+          "Object Pascal",
+          "Pascal"
+        ],
+        "extensions": [
+          ".pas",
+          ".pp",
+          ".dpr",
+          ".dpk",
+          ".inc",
+          ".p",
+          ".int"
+        ],
+        "filenames": [
+          "*.dpr"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "delphi",
+        "scopeName": "source.delphi",
+        "path": "./syntaxes/delphi.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "delphi.goToImplementation",
+        "title": "Go to Method Implementation / Interface Section",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi.goToDeclaration",
+        "title": "Go to Method Declaration / Implementation Section",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi.nextMethod",
+        "title": "Next Method (Declaration or Implementation)",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi.previousMethod",
+        "title": "Previous Method (Declaration or Implementation)",
+        "category": "Delphi"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "delphi.goToImplementation",
+        "key": "ctrl+shift+down",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+      },
+      {
+        "command": "delphi.goToDeclaration",
+        "key": "ctrl+shift+up",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+      },
+      {
+        "command": "delphi.goToImplementation",
+        "key": "ctrl+alt+down",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+      },
+      {
+        "command": "delphi.goToDeclaration",
+        "key": "ctrl+alt+up",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+      },
+      {
+        "command": "delphi.nextMethod",
+        "key": "alt+down",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+      },
+      {
+        "command": "delphi.previousMethod",
+        "key": "alt+up",
+        "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled"
+      }
+    ],
+    "configuration": {
+      "title": "Delphi",
+      "properties": {
+        "delphi.navigation.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Master switch for all Delphi navigation keybindings (Ctrl+Shift+Up/Down, Ctrl+Alt+Up/Down, Alt+Up/Down). Rebind individual shortcuts in your keybindings.json if the defaults conflict."
+        },
+        "delphi.navigation.goToImplementation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the 'Delphi: Go to Method Implementation / Interface Section' command and its shortcuts."
+        },
+        "delphi.navigation.goToDeclaration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the 'Delphi: Go to Method Declaration / Implementation Section' command and its shortcuts."
+        },
+        "delphi.navigation.nextPreviousMethod": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the 'Delphi: Next / Previous Method' commands and their shortcuts."
+        },
+        "delphi.navigation.matchOverloads": {
+          "type": "boolean",
+          "default": true,
+          "description": "When jumping between a method declaration and its implementation, compare parameter types so overloads resolve to the correct pair."
+        },
+        "delphi.navigation.jumpToSection": {
+          "type": "boolean",
+          "default": true,
+          "description": "When the cursor is not on a method, jump between the 'interface' and 'implementation' section headers (like the Delphi IDE)."
+        },
+        "delphi.navigation.showStatusMessage": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a status-bar message when a navigation jump succeeds or fails."
+        },
+        "delphi.folding.sections": {
+          "type": "boolean",
+          "default": true,
+          "description": "Provide fold regions for 'interface', 'implementation', 'initialization' and 'finalization' sections."
+        },
+        "delphi.folding.beginEnd": {
+          "type": "boolean",
+          "default": true,
+          "description": "Provide fold regions for begin/end, case, try, record and class blocks."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:grammar": "node --test test/grammar.test.js",
+    "test:parser": "node --test test/parser.test.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "vscode-oniguruma": "1.7.0",
+    "vscode-textmate": "8.0.0"
+  }
+}

@@ -1,0 +1,24 @@
+'use strict';
+
+const vscode = require('vscode');
+
+function getConfig() {
+  const cfg = vscode.workspace.getConfiguration('delphi');
+  return {
+    navigation: {
+      enabled: cfg.get('navigation.enabled', true),
+      goToImplementation: cfg.get('navigation.goToImplementation', true),
+      goToDeclaration: cfg.get('navigation.goToDeclaration', true),
+      nextPreviousMethod: cfg.get('navigation.nextPreviousMethod', true),
+      matchOverloads: cfg.get('navigation.matchOverloads', true),
+      jumpToSection: cfg.get('navigation.jumpToSection', true),
+      showStatusMessage: cfg.get('navigation.showStatusMessage', false),
+    },
+    folding: {
+      sections: cfg.get('folding.sections', true),
+      beginEnd: cfg.get('folding.beginEnd', true),
+    },
+  };
+}
+
+module.exports = { getConfig };
