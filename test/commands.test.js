@@ -34,8 +34,10 @@ const vscodeMock = {
   Selection,
   Range,
   TextEditorRevealType: { InMiddle: 1 },
+  ConfigurationTarget: { Global: 1 },
   window: {
     setStatusBarMessage: () => ({ dispose() {} }),
+    showQuickPick: () => Promise.resolve(null),
   },
   workspace: {
     getConfiguration: () => ({
@@ -151,4 +153,45 @@ test('non-delphi documents are ignored', () => {
   editor.document.languageId = 'plaintext';
   commands.goToImplementation(editor);
   assert.equal(editor.revealCalls.length, 0);
+});
+
+test('selectKeybindingStyle quick pick updates the style setting', async () => {
+  let picked = null;
+  let updated = null;
+  const originalQuickPick = vscodeMock.window.showQuickPick;
+  const originalGetConfig = vscodeMock.workspace.getConfiguration;
+  vscodeMock.window.showQuickPick = async (items) => items.find((i) => i.value === 'emacs');
+  vscodeMock.workspace.getConfiguration = (section) => {
+    if (section === 'delphi') {
+      return {
+        get: () => undefined,
+        update: (key, value) => { updated = { key, value }; return Promise.resolve(); },
+      };
+    }
+    return originalGetConfig(section);
+  };
+  await commands.selectKeybindingStyle();
+  assert.deepEqual(updated, { key: 'keybindings.style', value: 'emacs' });
+  vscodeMock.window.showQuickPick = originalQuickPick;
+  vscodeMock.workspace.getConfiguration = originalGetConfig;
+});
+
+test('selectColorScheme quick pick updates the colorScheme setting', async () => {
+  let updated = null;
+  const originalQuickPick = vscodeMock.window.showQuickPick;
+  const originalGetConfig = vscodeMock.workspace.getConfiguration;
+  vscodeMock.window.showQuickPick = async (items) => items.find((i) => i.value === 'turboPascal');
+  vscodeMock.workspace.getConfiguration = (section) => {
+    if (section === 'delphi') {
+      return {
+        get: () => undefined,
+        update: (key, value) => { updated = { key, value }; return Promise.resolve(); },
+      };
+    }
+    return originalGetConfig(section);
+  };
+  await commands.selectColorScheme();
+  assert.deepEqual(updated, { key: 'colorScheme', value: 'turboPascal' });
+  vscodeMock.window.showQuickPick = originalQuickPick;
+  vscodeMock.workspace.getConfiguration = originalGetConfig;
 });

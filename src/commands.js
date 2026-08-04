@@ -141,9 +141,51 @@ function previousMethod(editor) {
   }
 }
 
+/** Command palette: pick a Delphi syntax color scheme (Quick Pick). */
+function selectColorScheme() {
+  const items = [
+    { label: 'None', description: 'Use the colors of my current VS Code theme', value: 'none' },
+    { label: 'Code4Delphi Fancy', description: 'Vivid, hand-tuned Delphi syntax colors', value: 'fancy' },
+    { label: 'Code4Delphi Turbo Pascal', description: 'Classic Turbo Pascal IDE syntax colors', value: 'turboPascal' },
+    { label: 'Code4Delphi Delphi Dark', description: 'Delphi 13 default dark syntax colors', value: 'delphiDark' },
+    { label: 'Code4Delphi Delphi Light', description: 'Delphi 13 default light syntax colors', value: 'delphiLight' },
+  ];
+  vscode.window.showQuickPick(items, {
+    placeHolder: 'Select the Delphi syntax color scheme (applies to Delphi files only)',
+    canPickMany: false,
+  }).then((pick) => {
+    if (pick) {
+      return vscode.workspace
+        .getConfiguration('delphi')
+        .update('colorScheme', pick.value, vscode.ConfigurationTarget.Global);
+    }
+  });
+}
+
+/** Command palette: pick a keybinding style (Quick Pick). */
+function selectKeybindingStyle() {
+  const items = [
+    { label: 'Default', description: 'Ctrl+Shift+Up/Down, Ctrl+Alt+Up/Down, Alt+Up/Down', value: 'default' },
+    { label: 'Emacs', description: 'Alt+. / Alt+, and Ctrl+Alt+N/P', value: 'emacs' },
+    { label: 'WordStar', description: 'Ctrl+Q Ctrl+Up/Down and Ctrl+Q Ctrl+N/P', value: 'wordstar' },
+  ];
+  vscode.window.showQuickPick(items, {
+    placeHolder: 'Select the Delphi keybinding style',
+    canPickMany: false,
+  }).then((pick) => {
+    if (pick) {
+      return vscode.workspace
+        .getConfiguration('delphi')
+        .update('keybindings.style', pick.value, vscode.ConfigurationTarget.Global);
+    }
+  });
+}
+
 module.exports = {
   goToImplementation,
   goToDeclaration,
   nextMethod,
   previousMethod,
+  selectColorScheme,
+  selectKeybindingStyle,
 };

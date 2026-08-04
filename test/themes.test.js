@@ -44,13 +44,11 @@ function flatScopes(theme) {
   return set;
 }
 
-test('all four themes are valid and complete', () => {
+test('all four schemes are valid and complete', () => {
   for (const name of THEMES) {
     const theme = readTheme(name);
     assert.ok(theme.name, `${name}: name`);
     assert.ok(theme.name.startsWith('Code4Delphi '), `${name}: name prefix`);
-    assert.ok(['dark', 'light'].includes(theme.type), `${name}: type`);
-    assert.match(theme.include, /^\.\/delphi-base-(dark|light)\.json$/, `${name}: include local base theme`);
     assert.ok(Array.isArray(theme.tokenColors) && theme.tokenColors.length > 10, `${name}: tokenColors`);
 
     const scopes = flatScopes(theme);
@@ -64,7 +62,7 @@ test('all four themes are valid and complete', () => {
   }
 });
 
-test('themes cover every leaf scope produced by the grammar', () => {
+test('schemes cover every leaf scope produced by the grammar', () => {
   const grammar = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'syntaxes', 'delphi.tmLanguage.json'), 'utf8'));
   const scopes = new Set();
   const walk = (node) => {
@@ -83,40 +81,30 @@ test('themes cover every leaf scope produced by the grammar', () => {
   assert.deepEqual(missing, [], 'grammar leaf scopes missing in Fancy theme');
 });
 
-test('both base themes are valid and complete', () => {
-  for (const name of ['delphi-base-dark.json', 'delphi-base-light.json']) {
-    const base = readTheme(name);
-    assert.equal(base.type, name.includes('dark') ? 'dark' : 'light');
-    assert.ok(Array.isArray(base.tokenColors) && base.tokenColors.length >= 10, `${name}: tokenColors`);
-    for (const rule of base.tokenColors) {
-      assert.ok(rule.settings && rule.settings.foreground, `${name}: rule without foreground`);
-    }
-  }
-  // every contributed theme's include must exist
-  for (const name of THEMES) {
-    const theme = readTheme(name);
-    const basePath = path.join(__dirname, '..', 'themes', path.basename(theme.include));
-    assert.ok(fs.existsSync(basePath), `${name}: base file exists: ${theme.include}`);
-  }
-});
-
-test('package.json contributes all four themes and three keybinding styles', () => {
+test('package.json defines the schemes, commands and three keybinding styles', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-  const themeLabels = pkg.contributes.themes.map((t) => t.label);
-  assert.deepEqual(themeLabels, [
-    'Code4Delphi Fancy',
-    'Code4Delphi Turbo Pascal',
-    'Code4Delphi Delphi Dark',
-    'Code4Delphi Delphi Light',
-  ]);
-  for (const t of pkg.contributes.themes) {
-    assert.ok(fs.existsSync(path.join(__dirname, '..', t.path)), `theme file exists: ${t.path}`);
-  }
+  // no full color themes are contributed — schemes are per-language token colors only
+  assert.equal(pkg.contributes.themes, undefined, 'no contributes.themes (global themes)');
+  assert.equal(pkg.contributes.configuration.title, 'Code4Delphi');
 
   const styleSetting = pkg.contributes.configuration.properties['delphi.keybindings.style'];
   assert.deepEqual(styleSetting.enum, ['default', 'emacs', 'wordstar']);
   const schemeSetting = pkg.contributes.configuration.properties['delphi.colorScheme'];
   assert.deepEqual(schemeSetting.enum, ['none', 'fancy', 'turboPascal', 'delphiDark', 'delphiLight']);
+  assert.equal(schemeSetting.default, 'none');
+
+  // every scheme enum value (except none) has a theme file with rules
+  for (const value of ['fancy', 'turboPascal', 'delphiDark', 'delphiLight']) {
+    const f = { fancy: 'code4delphi-fancy-color-theme.json', turboPascal: 'code4delphi-turbo-pascal-color-theme.json', delphiDark: 'code4delphi-delphi-dark-color-theme.json', delphiLight: 'code4delphi-delphi-light-color-theme.json' }[value];
+    const scheme = readTheme(f);
+    assert.ok(scheme.tokenColors.length > 10, `${value}: rules`);
+  }
+
+  // quick-pick commands exist with Code4Delphi category
+  const cmdIds = pkg.contributes.commands.map((c) => c.command);
+  assert.ok(cmdIds.includes('delphi.selectColorScheme'));
+  assert.ok(cmdIds.includes('delphi.selectKeybindingStyle'));
+  assert.ok(pkg.contributes.commands.every((c) => c.category === 'Code4Delphi'));
 
   const bindings = pkg.contributes.keybindings;
   const byStyle = { default: [], emacs: [], wordstar: [] };

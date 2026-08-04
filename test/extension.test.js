@@ -16,7 +16,7 @@ class Range {
 
 const registeredCommands = [];
 const registeredProviders = [];
-const workbenchUpdates = [];
+const delphiConfigUpdates = [];
 
 const vscodeMock = {
   Position,
@@ -26,6 +26,10 @@ const vscodeMock = {
   ConfigurationTarget: { Global: 1, Workspace: 2 },
   commands: {
     registerTextEditorCommand: (id, fn) => {
+      registeredCommands.push({ id, fn });
+      return { dispose() {} };
+    },
+    registerCommand: (id, fn) => {
       registeredCommands.push({ id, fn });
       return { dispose() {} };
     },
@@ -41,11 +45,14 @@ const vscodeMock = {
   },
   workspace: {
     getConfiguration: (section) => {
-      if (section === 'workbench') {
+      if (section === 'editor') {
         return {
-          get: () => undefined,
+          get: (key, def) => {
+            if (key === 'tokenColorCustomizations') return { textMateRules: [] };
+            return def;
+          },
           update: (key, value, target) => {
-            workbenchUpdates.push({ key, value, target });
+            delphiConfigUpdates.push({ key, value, target });
             return Promise.resolve();
           },
         };
@@ -83,12 +90,14 @@ const ext = require('../src/extension.js');
 
 test('activation registers all four navigation commands', () => {
   ext.activate({ subscriptions: [] });
-  const ids = registeredCommands.map((c) => c.id).sort();
+  const ids = registeredCommands.map((c) => c.id).filter((id) => id.startsWith('delphi.')).sort();
   assert.deepEqual(ids, [
     'delphi.goToDeclaration',
     'delphi.goToImplementation',
     'delphi.nextMethod',
     'delphi.previousMethod',
+    'delphi.selectColorScheme',
+    'delphi.selectKeybindingStyle',
   ]);
 });
 
@@ -103,9 +112,15 @@ test('registered command handlers are callable', () => {
   assert.equal(typeof handler, 'function');
 });
 
-test('activation applies the configured color scheme to the workbench theme', () => {
-  const update = workbenchUpdates.find((u) => u.key === 'colorTheme');
-  assert.ok(update, 'workbench.colorTheme must be updated');
-  assert.equal(update.value, 'Code4Delphi Fancy'); // default scheme = fancy
+test('activation applies the syntax color scheme via Delphi-scoped token colors', () => {
+  const update = delphiConfigUpdates.find((u) => u.key === 'tokenColorCustomizations');
+  assert.ok(update, 'editor.tokenColorCustomizations must be updated');
+  assert.ok(Array.isArray(update.value.textMateRules), 'textMateRules array');
+  assert.ok(update.value.textMateRules.length > 10, 'rules present');
+  // every written rule must be delphi-scoped so only Delphi files are affected
+  for (const rule of update.value.textMateRules) {
+    const scopes = Array.isArray(rule.scope) ? rule.scope : [rule.scope];
+    assert.ok(scopes.every((s) => s.endsWith('.delphi')), `delphi-scoped rule expected: ${JSON.stringify(scopes)}`);
+  }
   assert.equal(update.target, vscodeMock.ConfigurationTarget.Global);
 });

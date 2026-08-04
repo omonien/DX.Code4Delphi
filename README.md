@@ -100,20 +100,23 @@ styles** — switch them with the `delphi.keybindings.style` setting:
 
 ### 3. Selectable color schemes
 
-Code4Delphi ships **four color themes** — pick one in the settings
-(`delphi.colorScheme`) or in the normal theme picker (`Cmd+K` `Cmd+T`):
+Code4Delphi ships **four syntax color schemes** for the Delphi highlighting —
+pick one via the setting `delphi.colorScheme` or the command palette
+(**`Code4Delphi: Select Color Scheme`**):
 
 | Scheme | Look |
 | --- | --- |
-| **Code4Delphi Fancy** | The modern Code4Delphi look (dark) — vivid, hand-tuned colors for the Delphi grammar. |
-| **Code4Delphi Turbo Pascal** | The classic Turbo Pascal IDE editor: navy-blue background, yellow keywords, cyan strings. |
-| **Code4Delphi Delphi Dark** | The Delphi 13 default **dark** editor colors. |
-| **Code4Delphi Delphi Light** | The Delphi 13 default **light** editor colors (blue keywords, red strings/numbers, green comments, teal types). |
+| **Code4Delphi Fancy** | The modern Code4Delphi look — vivid, hand-tuned colors for the Delphi grammar. |
+| **Code4Delphi Turbo Pascal** | The classic Turbo Pascal IDE syntax colors (navy, yellow keywords, cyan strings). |
+| **Code4Delphi Delphi Dark** | The Delphi 13 default **dark** editor syntax colors. |
+| **Code4Delphi Delphi Light** | The Delphi 13 default **light** editor syntax colors (blue keywords, red strings/numbers, green comments, teal types). |
 
-All four are **full VS Code themes** (built on compact, self-contained
-Dark+/Light+-style bases — no external theme dependencies), so the whole
-editor — not just Delphi files — matches the selected look. The Delphi token
-colors can be fine-tuned further per theme via `editor.tokenColorCustomizations`.
+The schemes affect **only the Delphi syntax highlighting** — your global VS Code
+theme is never changed. The selected scheme's rules are written to
+`editor.tokenColorCustomizations` and target exclusively `*.delphi` scopes
+(no other language produces them), so the colors apply to Delphi files only and
+work with **any** theme you use. Existing user token rules for other languages
+are preserved. Choose `None` to fall back to the colors of your current theme.
 
 ### 4. Code folding
 
@@ -139,7 +142,7 @@ Everything is configurable through settings (`Preferences → Settings → Exten
 | `delphi.navigation.jumpToSection` | `true` | When the cursor is not on a method, jump between the `interface`/`implementation` section headers. |
 | `delphi.navigation.showStatusMessage` | `false` | Show status-bar feedback on navigation. |
 | `delphi.keybindings.style` | `default` | Keybinding style for the navigation commands: `default`, `emacs` or `wordstar`. |
-| `delphi.colorScheme` | `fancy` | Color scheme to activate automatically: `fancy`, `turboPascal`, `delphiDark`, `delphiLight` or `none` (keep your current theme). |
+| `delphi.colorScheme` | `none` | Syntax color scheme for Delphi files only (global theme untouched): `fancy`, `turboPascal`, `delphiDark`, `delphiLight` or `none`. |
 | `delphi.folding.sections` | `true` | Fold the four unit sections. |
 | `delphi.folding.beginEnd` | `true` | Fold `begin…end` style blocks. |
 

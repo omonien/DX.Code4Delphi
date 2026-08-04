@@ -2,7 +2,7 @@
   "name": "code4delphi",
   "displayName": "Code4Delphi — Delphi Language Support",
   "description": "Code4Delphi: modern, high quality syntax highlighting and Delphi-IDE style code navigation (Ctrl+Shift+Up/Down, Alt+Up/Down) for Delphi 13.1 and all older versions. By Developer Experts, LLC.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "developerexperts",
   "author": "Developer Experts, LLC",
   "license": "MIT",
@@ -73,48 +73,36 @@
         "path": "./syntaxes/delphi.tmLanguage.json"
       }
     ],
-    "themes": [
-      {
-        "label": "Code4Delphi Fancy",
-        "uiTheme": "vs-dark",
-        "path": "./themes/code4delphi-fancy-color-theme.json"
-      },
-      {
-        "label": "Code4Delphi Turbo Pascal",
-        "uiTheme": "vs-dark",
-        "path": "./themes/code4delphi-turbo-pascal-color-theme.json"
-      },
-      {
-        "label": "Code4Delphi Delphi Dark",
-        "uiTheme": "vs-dark",
-        "path": "./themes/code4delphi-delphi-dark-color-theme.json"
-      },
-      {
-        "label": "Code4Delphi Delphi Light",
-        "uiTheme": "vs",
-        "path": "./themes/code4delphi-delphi-light-color-theme.json"
-      }
-    ],
     "commands": [
       {
         "command": "delphi.goToImplementation",
         "title": "Go to Method Implementation / Interface Section",
-        "category": "Delphi"
+        "category": "Code4Delphi"
       },
       {
         "command": "delphi.goToDeclaration",
         "title": "Go to Method Declaration / Implementation Section",
-        "category": "Delphi"
+        "category": "Code4Delphi"
       },
       {
         "command": "delphi.nextMethod",
         "title": "Next Method (Declaration or Implementation)",
-        "category": "Delphi"
+        "category": "Code4Delphi"
       },
       {
         "command": "delphi.previousMethod",
         "title": "Previous Method (Declaration or Implementation)",
-        "category": "Delphi"
+        "category": "Code4Delphi"
+      },
+      {
+        "command": "delphi.selectColorScheme",
+        "title": "Select Color Scheme (Syntax Highlighting)",
+        "category": "Code4Delphi"
+      },
+      {
+        "command": "delphi.selectKeybindingStyle",
+        "title": "Select Keybinding Style",
+        "category": "Code4Delphi"
       }
     ],
     "keybindings": [
@@ -190,7 +178,7 @@
       }
     ],
     "configuration": {
-      "title": "Delphi",
+      "title": "Code4Delphi",
       "properties": {
         "delphi.navigation.enabled": {
           "type": "boolean",
@@ -252,14 +240,14 @@
             "delphiLight"
           ],
           "enumDescriptions": [
-            "Keep my current color theme (do not switch automatically).",
-            "Code4Delphi Fancy — the modern, vivid Code4Delphi theme (dark).",
-            "Code4Delphi Turbo Pascal — the classic Turbo Pascal IDE look (navy blue, dark).",
-            "Code4Delphi Delphi Dark — Delphi 13 default dark editor colors.",
-            "Code4Delphi Delphi Light — Delphi 13 default light editor colors."
+            "No custom colors — Delphi is highlighted by your current VS Code theme.",
+            "Code4Delphi Fancy — vivid, hand-tuned Delphi syntax colors.",
+            "Code4Delphi Turbo Pascal — the classic Turbo Pascal IDE syntax colors (navy, yellow keywords, cyan strings).",
+            "Code4Delphi Delphi Dark — Delphi 13 default dark editor syntax colors.",
+            "Code4Delphi Delphi Light — Delphi 13 default light editor syntax colors."
           ],
-          "default": "fancy",
-          "description": "Select the Code4Delphi color scheme. The matching theme is activated automatically (all four themes are also available in the normal theme picker)."
+          "default": "none",
+          "description": "Color scheme for the Delphi **syntax highlighting** only. The global VS Code theme is never changed — the selected scheme's colors are applied to Delphi files via per-language token colors (also available from the command palette: 'Code4Delphi: Select Color Scheme')."
         },
         "delphi.folding.sections": {
           "type": "boolean",
