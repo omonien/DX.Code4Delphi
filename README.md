@@ -1,16 +1,12 @@
-# Delphi — High Quality Language Support for Visual Studio Code
+# Code4Delphi — Delphi Language Support for Visual Studio Code
 
 <p align="center">
-  <img src="media/banner.png" alt="Delphi by Developer Experts" width="640">
+  <img src="media/banner.png" alt="Code4Delphi by Developer Experts" width="640">
 </p>
 
-**Delphi** by **[Developer Experts, LLC](https://www.developer-experts.net)** — Modern, high-quality **Delphi / Object Pascal** language support for Visual Studio Code, covering the latest Delphi language features (through **Delphi 13.1** and all older versions back to Delphi 7), plus the code-navigation shortcuts Delphi developers expect from the RAD Studio IDE.
+**Code4Delphi** by **[Developer Experts, LLC](https://www.developer-experts.net)** — Modern, high-quality **Delphi / Object Pascal** language support for Visual Studio Code, covering the latest Delphi language features (through **Delphi 13.1** and all older versions back to Delphi 7), plus the code-navigation shortcuts Delphi developers expect from the RAD Studio IDE.
 
-<p align="center">
-  <img src="media/icon.png" alt="Delphi Helm" width="128">
-</p>
-
-The logo is the **Delphi helm** rendered in the Developer Experts brand blue (`#01A3DA`). The vector sources live in [`docs/`](docs/).
+The logo is the **Delphi helm** (official silhouette, [`media/Logo.svg`](media/Logo.svg)) rendered in the Developer Experts brand blue (`#01A3DA`). Vector sources live in [`docs/`](docs/).
 
 ## Features
 
