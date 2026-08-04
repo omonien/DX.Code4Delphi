@@ -5,6 +5,17 @@ All notable changes to **Code4Delphi** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] — 2025-08-04
+
+### Changed
+
+- **Logo without frame**: the extension icon (and `media/logo-512.png`) now
+  shows the Delphi helm on a **transparent background** — no dark tile around
+  it, matching how most other extensions display their logo.
+- **README**: detailed, explained feature overview added at the top of the
+  Features section (syntax highlighting, navigation, color schemes, folding,
+  editor conveniences); fixed section numbering.
+
 ## [1.3.1] — 2025-08-04
 
 ### Fixed
@@ -82,3 +93,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [1.2.0]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.2.0
 [1.3.0]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.0
 [1.3.1]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.1
+[1.3.2]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.2

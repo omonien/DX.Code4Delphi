@@ -42,6 +42,37 @@ want to **read, review and inspect Delphi code**, for example code written by
 
 ## Features
 
+Code4Delphi brings the features Delphi developers know from the RAD Studio IDE
+into Visual Studio Code:
+
+1. **High-quality syntax highlighting** — a hand-crafted TextMate grammar that
+   covers the complete **Delphi 13.1** language and every older version. Unit
+   sections, class/record/interface declarations, generics, attributes,
+   operator overloading, managed records and multi-line string literals are all
+   colored precisely — in any theme.
+
+2. **Delphi-IDE code navigation** — jump from an `interface` method declaration
+   to its `implementation` (`Ctrl+Shift+↓`), back with `Ctrl+Shift+↑`, and step
+   through methods with `Alt+↓` / `Alt+↑`. Navigation is **overload-aware**
+   (parameter types are compared, so you always land on the right method) and
+   understands classes, records, helpers, generics and global routines.
+
+3. **Selectable color schemes** — four syntax schemes for Delphi code:
+   **Fancy** (the vivid Code4Delphi look), **Turbo Pascal** (the classic IDE)
+   and the authentic **Delphi Light** / **Delphi Dark** colors of Delphi 13.1.
+   The default **`auto`** follows your VS Code light/dark theme. Only the
+   Delphi highlighting changes — your global theme is never touched.
+
+4. **Code folding** — fold unit sections (`interface`, `implementation`, …) and
+   `begin…end`, `case`, `try`, `record` and `class` blocks; `{$REGION}` /
+   `{$ENDREGION}` markers work, too.
+
+5. **Editor conveniences** — comment toggling for `//` and `{ }`, auto-closing
+   brackets and strings (incl. multi-line `'''…'''` literals), and correct
+   word selection for identifiers like `TMyClass_123`.
+
+The details:
+
 ### 1. High-quality syntax highlighting
 
 A carefully written TextMate grammar (`source.delphi`) that distinguishes:
@@ -126,7 +157,7 @@ are preserved. Choose `None` to fall back to the colors of your current theme.
 
 A folding provider creates fold regions for `interface` / `implementation` / `initialization` / `finalization` sections and for `begin…end`, `case`, `try`, `record` and `class` blocks. `{$REGION}` / `{$ENDREGION}` markers are honored too.
 
-### 4. Editor conveniences
+### 5. Editor conveniences
 
 * Comment toggling for `//` and `{ }`
 * Auto-closing pairs for `()`, `[]`, `{}`, strings and multi-line strings
