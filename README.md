@@ -108,8 +108,8 @@ pick one via the setting `delphi.colorScheme` or the command palette
 | --- | --- |
 | **Code4Delphi Fancy** | The modern Code4Delphi look — vivid, hand-tuned colors for the Delphi grammar. |
 | **Code4Delphi Turbo Pascal** | The classic Turbo Pascal IDE syntax colors (navy, yellow keywords, cyan strings). |
-| **Code4Delphi Delphi Dark** | The Delphi 13 default **dark** editor syntax colors (bold light-blue keywords). |
-| **Code4Delphi Delphi Light** | The Delphi 13 default **light** editor syntax colors (bold blue keywords, red strings/numbers, green comments, teal types). |
+| **Code4Delphi Delphi Dark** | The Delphi 13 default **dark** editor syntax colors (bold light-blue keywords, purple strings, light-blue numbers, green comments). |
+| **Code4Delphi Delphi Light** | The Delphi 13 default **light** editor syntax colors, extracted from a real Delphi 13.1 session: bold navy keywords, purple strings, blue numbers, green comments, black types/identifiers. |
 
 The default is **`auto`**: Code4Delphi detects whether your VS Code theme is
 light or dark and picks *Delphi Light* or *Delphi Dark* accordingly — and

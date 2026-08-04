@@ -49,7 +49,7 @@ test('all four schemes are valid and complete', () => {
     const theme = readTheme(name);
     assert.ok(theme.name, `${name}: name`);
     assert.ok(theme.name.startsWith('Code4Delphi '), `${name}: name prefix`);
-    assert.ok(Array.isArray(theme.tokenColors) && theme.tokenColors.length > 10, `${name}: tokenColors`);
+    assert.ok(Array.isArray(theme.tokenColors) && theme.tokenColors.length >= 10, `${name}: tokenColors`);
 
     const scopes = flatScopes(theme);
     for (const scope of CORE_SCOPES) {
@@ -97,7 +97,7 @@ test('package.json defines the schemes, commands and three keybinding styles', (
   for (const value of ['fancy', 'turboPascal', 'delphiDark', 'delphiLight']) {
     const f = { fancy: 'code4delphi-fancy-color-theme.json', turboPascal: 'code4delphi-turbo-pascal-color-theme.json', delphiDark: 'code4delphi-delphi-dark-color-theme.json', delphiLight: 'code4delphi-delphi-light-color-theme.json' }[value];
     const scheme = readTheme(f);
-    assert.ok(scheme.tokenColors.length > 10, `${value}: rules`);
+    assert.ok(scheme.tokenColors.length >= 10, `${value}: rules`);
   }
 
   // quick-pick commands exist with Code4Delphi category

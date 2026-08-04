@@ -5,6 +5,20 @@ All notable changes to **Code4Delphi** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] — 2025-08-04
+
+### Fixed
+
+- **Delphi Light/Dark schemes now match the real Delphi 13.1 default colors**
+  (measured from reference screenshots of the fixture units in the Delphi IDE):
+  - Light: bold navy keywords (`#000C7A`), **purple** strings (`#741F7B`),
+    bright-blue numbers (`#0024F4`), green comments (`#3A7C27`), black
+    types/identifiers.
+  - Dark: bold cream keywords (`#FAE0BF`), light-blue strings (`#86A9F8`),
+    light-pink numbers (`#EE85A8`), light-green comments (`#C3E48E`),
+    off-white types/identifiers.
+  The previous yellow-ish string color was a misreading of the screenshot.
+
 ## [1.3.0] — 2025-08-04
 
 ### Added
@@ -67,3 +81,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [1.1.0]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.1.0
 [1.2.0]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.2.0
 [1.3.0]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.0
+[1.3.1]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.1
