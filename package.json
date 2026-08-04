@@ -3,8 +3,17 @@
   "displayName": "Delphi — High Quality Language Support",
   "description": "Modern, high quality syntax highlighting and Delphi-IDE style code navigation (Ctrl+Shift+Up/Down, Alt+Up/Down) for Delphi 13.1 and all older versions.",
   "version": "1.0.0",
-  "publisher": "code4delphi",
+  "publisher": "developerexperts",
+  "author": "Developer Experts, LLC",
   "license": "MIT",
+  "homepage": "https://www.developer-experts.net",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omonien/DX.Code4DelphiX.git"
+  },
+  "bugs": {
+    "url": "https://github.com/omonien/DX.Code4DelphiX/issues"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },

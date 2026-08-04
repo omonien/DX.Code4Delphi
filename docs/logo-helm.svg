@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#232838"/>
+      <stop offset="1" stop-color="#12141c"/>
+    </linearGradient>
+    <linearGradient id="helm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38cbf5"/>
+      <stop offset="0.55" stop-color="#01a3da"/>
+      <stop offset="1" stop-color="#04648f"/>
+    </linearGradient>
+    <linearGradient id="plume" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4fd4fb"/>
+      <stop offset="1" stop-color="#0e86b5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded tile -->
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#bg)"/>
+  <rect x="28" y="28" width="456" height="456" rx="92" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="4"/>
+
+  <!-- plume / crest: sweeping swoosh over the top -->
+  <path d="M 402 124 C 404 56, 300 26, 198 96"
+        fill="none" stroke="url(#plume)" stroke-width="40" stroke-linecap="round"/>
+
+  <!-- helmet body: solid D (vertical bar + right half-disc) -->
+  <rect x="150" y="104" width="72" height="304" rx="36" fill="url(#helm)"/>
+  <path d="M 222 104 A 152 152 0 0 1 222 408 Z" fill="url(#helm)"/>
+
+  <!-- visor slit (crescent face opening) -->
+  <path d="M 334 236
+           C 372 226, 398 248, 388 274
+           C 380 292, 356 294, 348 284
+           C 366 272, 368 252, 334 236 Z"
+        fill="#0b1220"/>
+
+  <!-- brow highlight -->
+  <path d="M 250 120
+           C 330 116, 392 140, 424 180
+           C 386 138, 316 112, 250 120 Z"
+        fill="#7fe1ff" fill-opacity="0.35"/>
+</svg>
