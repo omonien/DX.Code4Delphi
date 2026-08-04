@@ -6,6 +6,15 @@
 
 **Code4Delphi** by **[Developer Experts, LLC](https://www.developer-experts.net)** — Modern, high-quality **Delphi / Object Pascal** language support for Visual Studio Code, covering the latest Delphi language features (through **Delphi 13.1** and all older versions back to Delphi 7), plus the code-navigation shortcuts Delphi developers expect from the RAD Studio IDE.
 
+## Quick Info
+
+**Syntax Highlighting** & **Familiar Keybindings** for **Delphi in Visual Studio Code** — out of the box:
+
+| | |
+| --- | --- |
+| 🎨 **Syntax Highlighting** | Modern, high-quality **Delphi 13.1** syntax highlighting — all latest language features plus full support for older Delphi code, in `.pas`, `.pp`, `.dpr`, `.dpk`, `.inc`, `.p` and `.int` files. |
+| ⌨️ **Familiar Keybindings** | The **Delphi IDE shortcuts you already know**: `Ctrl+Shift+↓` / `Ctrl+Alt+↓` → interface ↔ implementation, `Ctrl+Shift+↑` / `Ctrl+Alt+↑` → back to declaration, `Alt+↓` / `Alt+↑` → next / previous method. |
+
 The logo is the **Delphi helm** (official silhouette, [`media/Logo.svg`](media/Logo.svg)) rendered in the Developer Experts brand blue (`#01A3DA`). Vector sources live in [`docs/`](docs/).
 
 ## Features
