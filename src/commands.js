@@ -13,6 +13,24 @@ const {
 } = require('./parser.js');
 const { getConfig } = require('./configuration.js');
 
+/** @type {WeakMap<object, { version: *, text: string, model: object }>} */
+const analyzeCache = new WeakMap();
+
+/**
+ * Analyze a document, reusing the last model while document.version/text are unchanged.
+ */
+function analyzeDocument(document) {
+  const text = document.getText();
+  const version = document.version;
+  const cached = analyzeCache.get(document);
+  if (cached && cached.version === version && cached.text === text) {
+    return cached.model;
+  }
+  const model = analyze(text);
+  analyzeCache.set(document, { version, text, model });
+  return model;
+}
+
 function status(message) {
   if (getConfig().navigation.showStatusMessage) {
     vscode.window.setStatusBarMessage(`Delphi: ${message}`, 2500);
@@ -37,15 +55,25 @@ function jumpToSectionLine(editor, line) {
   return true;
 }
 
-/** Ctrl+Shift+Down / Ctrl+Alt+Down — Delphi "interface <-> implementation". */
-function goToImplementation(editor) {
+/**
+ * Toggle between a method's interface declaration and implementation, or
+ * (when the cursor is not on a method) jump between the section headers.
+ *
+ * @param {import('vscode').TextEditor} editor
+ * @param {'implementation'|'declaration'} sectionFallback which section header
+ *        to jump to when the cursor is not on a method
+ */
+function goToMethodPair(editor, sectionFallback) {
   if (!editor || editor.document.languageId !== 'delphi') return;
-  const doc = editor.document;
-  const model = analyze(doc.getText());
-  const pos = editor.selection.active;
   const cfg = getConfig().navigation;
+  if (!cfg.enabled) return;
+  if (sectionFallback === 'implementation' && !cfg.goToImplementation) return;
+  if (sectionFallback === 'declaration' && !cfg.goToDeclaration) return;
 
+  const model = analyzeDocument(editor.document);
+  const pos = editor.selection.active;
   const decl = methodAtPosition(model, pos.line, pos.character);
+
   if (decl) {
     if (decl.section === 'interface') {
       const impl = findImplementation(decl, model.implementationMethods, cfg.matchOverloads);
@@ -57,59 +85,31 @@ function goToImplementation(editor) {
       status(`No implementation found for ${qualifiedName(decl)}`);
       return;
     }
-    // already at the implementation — jump back to its declaration like the IDE
-    const decl2 = findDeclaration(decl, model.interfaceMethods, cfg.matchOverloads);
-    if (decl2) {
-      jumpTo(editor, decl2);
+    const target = findDeclaration(decl, model.interfaceMethods, cfg.matchOverloads);
+    if (target) {
+      jumpTo(editor, target);
       status(`← declaration of ${qualifiedName(decl)}`);
       return;
     }
+    status(`No interface declaration found for ${qualifiedName(decl)}`);
     return;
   }
 
   if (!cfg.jumpToSection) return;
   const section = sectionAtPosition(model, pos.line);
-  if (section === 'interface' || regionForLine(model, pos.line) === 'interface') {
-    if (model.sections.implementation >= 0) {
-      jumpToSectionLine(editor, model.sections.implementation);
-      status('→ implementation section');
-    }
-  }
-}
+  const region = regionForLine(model, pos.line);
 
-/** Ctrl+Shift+Up / Ctrl+Alt+Up — Delphi "implementation <-> interface". */
-function goToDeclaration(editor) {
-  if (!editor || editor.document.languageId !== 'delphi') return;
-  const doc = editor.document;
-  const model = analyze(doc.getText());
-  const pos = editor.selection.active;
-  const cfg = getConfig().navigation;
-
-  const decl = methodAtPosition(model, pos.line, pos.character);
-  if (decl) {
-    if (decl.section === 'implementation') {
-      const target = findDeclaration(decl, model.interfaceMethods, cfg.matchOverloads);
-      if (target) {
-        jumpTo(editor, target);
-        status(`← declaration of ${qualifiedName(decl)}`);
-        return;
+  if (sectionFallback === 'implementation') {
+    if (section === 'interface' || region === 'interface') {
+      if (model.sections.implementation >= 0) {
+        jumpToSectionLine(editor, model.sections.implementation);
+        status('→ implementation section');
       }
-      status(`No interface declaration found for ${qualifiedName(decl)}`);
-      return;
-    }
-    // already at the declaration — jump to its implementation like the IDE
-    const impl = findImplementation(decl, model.implementationMethods, cfg.matchOverloads);
-    if (impl) {
-      jumpTo(editor, impl);
-      status(`→ implementation of ${qualifiedName(decl)}`);
-      return;
     }
     return;
   }
 
-  if (!cfg.jumpToSection) return;
-  const section = sectionAtPosition(model, pos.line);
-  if (section === 'implementation' || regionForLine(model, pos.line) === 'implementation') {
+  if (section === 'implementation' || region === 'implementation') {
     if (model.sections.interface >= 0) {
       jumpToSectionLine(editor, model.sections.interface);
       status('← interface section');
@@ -117,10 +117,22 @@ function goToDeclaration(editor) {
   }
 }
 
+/** Ctrl+Shift+Down / Ctrl+Alt+Down — Delphi "interface <-> implementation". */
+function goToImplementation(editor) {
+  goToMethodPair(editor, 'implementation');
+}
+
+/** Ctrl+Shift+Up / Ctrl+Alt+Up — Delphi "implementation <-> interface". */
+function goToDeclaration(editor) {
+  goToMethodPair(editor, 'declaration');
+}
+
 /** Alt+Down — Delphi "next method". */
 function nextMethod(editor) {
   if (!editor || editor.document.languageId !== 'delphi') return;
-  const model = analyze(editor.document.getText());
+  const cfg = getConfig().navigation;
+  if (!cfg.enabled || !cfg.nextPreviousMethod) return;
+  const model = analyzeDocument(editor.document);
   const pos = editor.selection.active;
   const target = findNextMethod(model, pos.line, pos.character);
   if (target) {
@@ -132,7 +144,9 @@ function nextMethod(editor) {
 /** Alt+Up — Delphi "previous method". */
 function previousMethod(editor) {
   if (!editor || editor.document.languageId !== 'delphi') return;
-  const model = analyze(editor.document.getText());
+  const cfg = getConfig().navigation;
+  if (!cfg.enabled || !cfg.nextPreviousMethod) return;
+  const model = analyzeDocument(editor.document);
   const pos = editor.selection.active;
   const target = findPreviousMethod(model, pos.line, pos.character);
   if (target) {
@@ -151,7 +165,7 @@ function selectColorScheme() {
     { label: 'Code4Delphi Delphi Dark', description: 'Delphi 13 default dark syntax colors', value: 'delphiDark' },
     { label: 'Code4Delphi Delphi Light', description: 'Delphi 13 default light syntax colors', value: 'delphiLight' },
   ];
-  vscode.window.showQuickPick(items, {
+  return vscode.window.showQuickPick(items, {
     placeHolder: 'Select the Delphi syntax color scheme (applies to Delphi files only)',
     canPickMany: false,
   }).then((pick) => {
@@ -170,7 +184,7 @@ function selectKeybindingStyle() {
     { label: 'Emacs', description: 'Alt+. / Alt+, and Ctrl+Alt+N/P', value: 'emacs' },
     { label: 'WordStar', description: 'Ctrl+Q Ctrl+Up/Down and Ctrl+Q Ctrl+N/P', value: 'wordstar' },
   ];
-  vscode.window.showQuickPick(items, {
+  return vscode.window.showQuickPick(items, {
     placeHolder: 'Select the Delphi keybinding style',
     canPickMany: false,
   }).then((pick) => {
@@ -189,4 +203,5 @@ module.exports = {
   previousMethod,
   selectColorScheme,
   selectKeybindingStyle,
+  analyzeDocument, // exported for tests
 };

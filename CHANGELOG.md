@@ -5,6 +5,29 @@ All notable changes to **Code4Delphi** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] — 2026-08-06
+
+### Fixed
+
+- **Navigation: forward `class;` / `class of` no longer steal ownership** of later
+  global routines (interface `className` stayed stuck on the forward type).
+- **Navigation: multi-name parameter groups** (`A, B: Integer`) expand to one
+  type per formal so overloads match implementations written as
+  `A: Integer; B: Integer`.
+- **Navigation: overload matching is exact** when `matchOverloads` is on — no
+  silent fallback to the first same-named candidate.
+- **Navigation: indented `begin`** after a method header no longer suppresses
+  every subsequent implementation method.
+- **Navigation: `type T = class` on one line** correctly owns nested methods.
+- **Navigation: `methodAtPosition`** respects the signature end column.
+- **Activation** no longer runs on every VS Code start (`onStartupFinished`
+  removed) — the extension activates for Delphi files and its commands.
+- **Color scheme apply** skips writing `editor.tokenColorCustomizations` when
+  the rules are already correct (less `settings.json` thrash).
+- **Commands** are always registered; nav feature flags are checked at
+  invocation time (no reload needed after toggling settings).
+- Marketplace categories no longer claim Formatters/Snippets.
+
 ## [1.3.2] — 2025-08-04
 
 ### Changed
@@ -94,3 +117,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [1.3.0]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.0
 [1.3.1]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.1
 [1.3.2]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.2
+[1.3.3]: https://github.com/omonien/DX.Code4DelphiX/releases/tag/v1.3.3

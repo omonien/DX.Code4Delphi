@@ -142,3 +142,28 @@ test('auto scheme follows the active theme kind (dark -> Delphi Dark)', () => {
   assert.ok(property, 'property rule present');
   assert.ok(!property.settings.fontStyle || property.settings.fontStyle === 'normal', 'property names must not be bold');
 });
+
+test('applyColorScheme does not rewrite settings when rules are unchanged', async () => {
+  // Seed the mock "current" settings with the rules already applied by activate
+  const applied = delphiConfigUpdates.find((u) => u.key === 'tokenColorCustomizations').value;
+  const originalGetConfiguration = vscodeMock.workspace.getConfiguration;
+  vscodeMock.workspace.getConfiguration = (section) => {
+    if (section === 'editor') {
+      return {
+        get: (key, def) => {
+          if (key === 'tokenColorCustomizations') return applied;
+          return def;
+        },
+        update: (key, value, target) => {
+          delphiConfigUpdates.push({ key, value, target });
+          return Promise.resolve();
+        },
+      };
+    }
+    return originalGetConfiguration(section);
+  };
+  const before = delphiConfigUpdates.length;
+  await ext.applyColorScheme();
+  assert.equal(delphiConfigUpdates.length, before, 'no settings write when already applied');
+  vscodeMock.workspace.getConfiguration = originalGetConfiguration;
+});
