@@ -11,10 +11,29 @@
 
 const METHOD_KW = '(?:class\\s+|sealed\\s+|static\\s+)?(procedure|function|constructor|destructor|operator)';
 const IDENT = '[A-Za-z_][A-Za-z0-9_]*';
-const TYPE_DECL_RE = new RegExp(`^\\s*(${IDENT})(?:<[^>]+>)?\\s*=\\s*(?:packed\\s+)?(class|interface|dispinterface|record|object)(?=\\s|\\(|;|$)`);
+/**
+ * Type header: optional `type` prefix, name, `= [packed] class|interface|…`, rest of line.
+ * No trailing `$` — sources may be CRLF and `.` does not consume `\r`, which would
+ * make an end-anchored pattern fail on Windows line endings.
+ */
+const TYPE_DECL_RE = new RegExp(
+  `^\\s*(?:type\\s+)?(${IDENT})(?:<[^>]+>)?\\s*=\\s*(?:packed\\s+)?(class|interface|dispinterface|record|object)\\b(.*)`,
+  'i'
+);
 const END_RE = /^\s*end\b[;.]?/;
 const IFACE_METHOD_RE = new RegExp(`^\\s*${METHOD_KW}\\s+(${IDENT})`);
 const IMPL_METHOD_RE = new RegExp(`^\\s*${METHOD_KW}\\s+(${IDENT})(?:<[^>]+>)?(?:\\.(${IDENT}))?`);
+
+/**
+ * True when this type header opens a body that will be closed by `end`
+ * (not a forward `class;` / `interface;` and not `class of …`).
+ */
+function typeDeclOpensBody(restAfterKeyword) {
+  const rest = (restAfterKeyword || '').trimStart();
+  if (rest.startsWith(';')) return false; // forward: TFoo = class;
+  if (/^of\b/i.test(rest)) return false; // metaclass: TMeta = class of TObject
+  return true;
+}
 
 class SectionIndex {
   constructor() {
@@ -41,8 +60,14 @@ class Decl {
     this.signatureEndCol = opts.signatureEndCol || 0;
   }
 
+  /**
+   * True when (line, col) lies on this signature. The start column is not
+   * enforced so a cursor on the class prefix (`TMyClass.Foo`) still hits;
+   * past the terminating `;` does not.
+   */
   contains(line, col) {
     if (line < this.line || line > this.signatureEndLine) return false;
+    if (line === this.signatureEndLine && col > this.signatureEndCol) return false;
     return true;
   }
 }
@@ -162,6 +187,20 @@ function normalizeType(t) {
   return t.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+/** Sentinel type for untyped formals (`const Source; var Dest`). */
+const UNTYPED_PARAM = '?';
+
+/**
+ * Count comma-separated formal names in a parameter group (left of `:` or whole
+ * untyped group), stripping leading const/var/out/ref on each name.
+ */
+function countFormalNames(left) {
+  const names = splitTopLevel(left, ',')
+    .map((s) => s.trim().replace(/^(?:const|var|out|ref)\s+/i, '').trim())
+    .filter(Boolean);
+  return Math.max(1, names.length);
+}
+
 /** Extract normalized parameter type list from the text between ( ). */
 function extractParamTypes(inner) {
   const types = [];
@@ -170,9 +209,19 @@ function extractParamTypes(inner) {
     if (!part) continue;
     part = part.replace(/^(?:const|var|out|ref)\s+/i, '');
     const colon = lastTopLevelColon(part);
-    const type = colon >= 0 ? part.slice(colon + 1).trim() : part;
+    if (colon < 0) {
+      // Untyped formals (e.g. Move's `const Source; var Dest`) — keep arity
+      const count = countFormalNames(part);
+      for (let n = 0; n < count; n++) types.push(UNTYPED_PARAM);
+      continue;
+    }
+    const left = part.slice(0, colon).trim();
+    const type = part.slice(colon + 1).trim();
     const norm = normalizeType(type);
-    if (norm) types.push(norm);
+    if (!norm) continue;
+    // `A, B: Integer` is two formals — expand so overload matching stays accurate
+    const count = countFormalNames(left);
+    for (let n = 0; n < count; n++) types.push(norm);
   }
   return types;
 }
@@ -203,7 +252,8 @@ function readSignature(source, masked, offset, lineStarts, declLine) {
     paramsText = source.slice(start, i - 1);
     params = extractParamTypes(paramsText);
   }
-  // return type: scan to ';' at depth 0 (masked text so strings/comments ignored)
+  const afterParams = i; // first char after optional parameter list
+  // return type / directives: scan to ';' at depth 0 (masked text so strings/comments ignored)
   let returnType = '';
   let depth = 0;
   while (i < n) {
@@ -213,11 +263,10 @@ function readSignature(source, masked, offset, lineStarts, declLine) {
     else if (ch === ')') depth = Math.max(0, depth - 1);
     i++;
   }
-  // normalized return type: everything between ')' and ';'
+  // normalized return type: everything between the parameter list and ';'
   if (i < n) {
-    const close = paramsText.length > 0 ? offset + paramsText.length + 2 : offset;
-    const ret = source.slice(close, i);
-    const colon = ret.indexOf(':');
+    const ret = source.slice(afterParams, i);
+    const colon = lastTopLevelColon(ret);
     if (colon >= 0) returnType = normalizeType(ret.slice(colon + 1));
   }
   let endLine = declLine;
@@ -243,8 +292,12 @@ function scanInterfaceDecls(source, masked, lineStarts, startLine, endLine) {
 
     const typeMatch = trimmed.match(TYPE_DECL_RE);
     if (typeMatch) {
-      stack.push({ name: typeMatch[1], indent });
-      classes.push({ name: typeMatch[1], line: i });
+      const name = typeMatch[1];
+      classes.push({ name, line: i });
+      // Forward (`class;`) and metaclass (`class of`) open no body — do not push
+      if (typeDeclOpensBody(typeMatch[3])) {
+        stack.push({ name, indent });
+      }
       continue;
     }
     if (END_RE.test(trimmed) && stack.length > 0 && indent <= stack[stack.length - 1].indent) {
@@ -296,47 +349,63 @@ function scanImplDecls(source, masked, lineStarts, startLine, endLine) {
   const methods = [];
   const maskLines = masked.split('\n');
   let depth = 0;
-  // A method recorded at depth 0 is "awaiting its begin". Local routines
-  // declared between the method header and its begin are skipped.
+  // After a top-level method header we await its body. Nested local routines
+  // declared before that body must not be indexed and must not clear the wait.
   let awaitingBody = false;
+  let nestedLocals = 0;
   for (let i = startLine; i < endLine; i++) {
     const line = maskLines[i];
     const trimmed = line.trimStart();
     const indent = line.length - trimmed.length;
-    if (depth === 0 && trimmed.length > 0 && !awaitingBody) {
+    if (depth === 0 && trimmed.length > 0) {
       const m = trimmed.match(IMPL_METHOD_RE);
       if (m) {
-        const name = m[3] || m[2];
-        const className = m[3] ? m[2] : null;
-        const col = indent + m.index + m[0].length - name.length;
-        const offset = lineStarts[i] + col + name.length;
-        const sig = readSignature(source, masked, offset, lineStarts, i);
-        methods.push(new Decl({
-          section: 'implementation',
-          kind: m[1].toLowerCase(),
-          name,
-          className,
-          line: i,
-          col,
-          nameLen: name.length,
-          params: sig.params,
-          paramsText: sig.paramsText,
-          returnType: sig.returnType,
-          signatureEndLine: sig.endLine,
-          signatureEndCol: sig.endCol,
-        }));
-        const after = trimmed.slice(m[0].length);
-        if (!/\bbegin\b/.test(after) && !/\b(forward|external)\b/.test(after)) {
-          awaitingBody = true;
+        if (!awaitingBody && nestedLocals === 0) {
+          const name = m[3] || m[2];
+          const className = m[3] ? m[2] : null;
+          const col = indent + m.index + m[0].length - name.length;
+          const offset = lineStarts[i] + col + name.length;
+          const sig = readSignature(source, masked, offset, lineStarts, i);
+          methods.push(new Decl({
+            section: 'implementation',
+            kind: m[1].toLowerCase(),
+            name,
+            className,
+            line: i,
+            col,
+            nameLen: name.length,
+            params: sig.params,
+            paramsText: sig.paramsText,
+            returnType: sig.returnType,
+            signatureEndLine: sig.endLine,
+            signatureEndCol: sig.endCol,
+          }));
+          const after = trimmed.slice(m[0].length);
+          if (!/\bbegin\b/.test(after) && !/\b(forward|external)\b/.test(after)) {
+            awaitingBody = true;
+          }
+        } else if (awaitingBody) {
+          // Local routine declared before the outer begin
+          nestedLocals++;
+          const after = trimmed.slice(m[0].length);
+          // Same-line begin/end is handled purely by block depth below
+          if (/\b(forward|external)\b/.test(after)) {
+            nestedLocals = Math.max(0, nestedLocals - 1);
+          }
         }
       }
     }
     const delta = countBlockDelta(line);
-    // The awaited method body opens with a block keyword at column 0.
-    if (delta > 0 && depth === 0 && indent === 0 && awaitingBody) {
+    const prevDepth = depth;
+    // Outer body opens only when no nested local is still open
+    if (delta > 0 && depth === 0 && awaitingBody && nestedLocals === 0) {
       awaitingBody = false;
     }
     depth = Math.max(0, depth + delta);
+    // A nested local's body closed when depth returns to 0
+    if (prevDepth > 0 && depth === 0 && nestedLocals > 0) {
+      nestedLocals--;
+    }
   }
   return methods;
 }
@@ -396,11 +465,11 @@ function paramsEqual(a, b) {
 }
 
 function pickMatch(candidates, decl, matchOverloads) {
+  if (candidates.length === 0) return null;
   if (matchOverloads) {
-    const exact = candidates.find((c) => paramsEqual(c.params, decl.params));
-    if (exact) return exact;
+    return candidates.find((c) => paramsEqual(c.params, decl.params)) || null;
   }
-  return candidates[0] || null;
+  return candidates[0];
 }
 
 /** Find the implementation for an interface method declaration. */
@@ -497,20 +566,15 @@ function computeFoldRegions(text, opts) {
 
   if (opts.beginEnd) {
     const stack = []; // pending open-block start lines
-    let depth = 0;
     for (let i = 0; i < maskLines.length; i++) {
       const delta = countBlockDelta(maskLines[i]);
       if (delta > 0) {
-        for (let k = 0; k < delta; k++) {
-          depth++;
-          stack.push(i);
-        }
+        for (let k = 0; k < delta; k++) stack.push(i);
       } else if (delta < 0) {
         for (let k = 0; k < -delta; k++) {
           if (stack.length > 0) {
             const start = stack.pop();
             if (i > start) regions.push([start, i]);
-            depth = Math.max(0, depth - 1);
           }
         }
       }
@@ -535,6 +599,7 @@ module.exports = {
   computeFoldRegions,
   extractParamTypes,
   countBlockDelta,
+  typeDeclOpensBody,
   Decl,
   SectionIndex,
 };

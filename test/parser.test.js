@@ -176,12 +176,186 @@ test('extractParamTypes handles complex signatures', () => {
   assert.deepEqual(extractParamTypes('const C: array of Byte'), ['array of byte']);
   assert.deepEqual(extractParamTypes('const F: TFunc<Integer, string>'), ['tfunc<integer, string>']);
   assert.deepEqual(extractParamTypes('const CB: TNotifyEvent'), ['tnotifyevent']);
-  assert.deepEqual(extractParamTypes('A, B: TMyClass'), ['tmyclass']);
-  assert.deepEqual(extractParamTypes('X, Y: Integer'), ['integer']);
+  // Multi-name groups expand to one type entry per formal parameter
+  assert.deepEqual(extractParamTypes('A, B: TMyClass'), ['tmyclass', 'tmyclass']);
+  assert.deepEqual(extractParamTypes('X, Y: Integer'), ['integer', 'integer']);
+  assert.deepEqual(extractParamTypes('const A, B: Integer'), ['integer', 'integer']);
   assert.deepEqual(extractParamTypes('S: set of Byte'), ['set of byte']);
   assert.deepEqual(extractParamTypes('P: ^Integer'), ['^integer']);
   assert.deepEqual(extractParamTypes('const P: procedure(A: Integer) of object'), ['procedure(a: integer) of object']);
   assert.deepEqual(extractParamTypes(''), []);
+});
+
+test('forward class and class-of do not pollute later global routines', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  TFoo = class;',
+    '  TMeta = class of TObject;',
+    '  TBar = class',
+    '    procedure Hello;',
+    '  end;',
+    'procedure GlobalProc;',
+    'implementation',
+    'procedure TBar.Hello;',
+    'begin',
+    'end;',
+    'procedure GlobalProc;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  const hello = model.interfaceMethods.find((d) => d.name === 'Hello');
+  const global = model.interfaceMethods.find((d) => d.name === 'GlobalProc');
+  assert.equal(hello.className, 'TBar');
+  assert.equal(global.className, null, 'global must not inherit a forward/class-of owner');
+  const impl = findImplementation(global, model.implementationMethods, true);
+  assert.ok(impl, 'global procedure must resolve to its implementation');
+  assert.equal(impl.className, null);
+});
+
+test('type keyword on the same line as the class name still owns methods', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type T = class',
+    '  procedure Hello;',
+    'end;',
+    'implementation',
+    'procedure T.Hello;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  assert.equal(model.interfaceMethods.length, 1);
+  assert.equal(model.interfaceMethods[0].className, 'T');
+  assert.ok(findImplementation(model.interfaceMethods[0], model.implementationMethods, true));
+});
+
+test('multi-name interface params match split implementation params', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  T = class',
+    '    procedure Foo(A, B: Integer); overload;',
+    '    procedure Foo(S: string); overload;',
+    '  end;',
+    'implementation',
+    'procedure T.Foo(A: Integer; B: Integer);',
+    'begin',
+    'end;',
+    'procedure T.Foo(S: string);',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  const ifaceInt = model.interfaceMethods.find((d) => d.params[0] === 'integer');
+  const ifaceStr = model.interfaceMethods.find((d) => d.params[0] === 'string');
+  assert.deepEqual(ifaceInt.params, ['integer', 'integer']);
+  const implInt = findImplementation(ifaceInt, model.implementationMethods, true);
+  const implStr = findImplementation(ifaceStr, model.implementationMethods, true);
+  assert.ok(implInt);
+  assert.deepEqual(implInt.params, ['integer', 'integer']);
+  assert.ok(implStr);
+  assert.deepEqual(implStr.params, ['string']);
+});
+
+test('overload match does not fall back to the wrong candidate', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  T = class',
+    '    procedure Foo(A: Integer); overload;',
+    '    procedure Foo(S: string); overload;',
+    '  end;',
+    'implementation',
+    'procedure T.Foo(S: string);',
+    'begin',
+    'end;',
+    // Integer overload deliberately missing
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  const ifaceInt = model.interfaceMethods.find((d) => d.params[0] === 'integer');
+  const ifaceStr = model.interfaceMethods.find((d) => d.params[0] === 'string');
+  assert.equal(findImplementation(ifaceInt, model.implementationMethods, true), null);
+  assert.ok(findImplementation(ifaceStr, model.implementationMethods, true));
+});
+
+test('indented begin does not suppress subsequent implementation methods', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'implementation',
+    'procedure Foo;',
+    '  begin',
+    '  end;',
+    'procedure Bar;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const names = analyze(src).implementationMethods.map((d) => d.name);
+  assert.deepEqual(names, ['Foo', 'Bar']);
+});
+
+test('multiple nested locals before outer begin are not indexed', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'implementation',
+    'procedure Outer;',
+    '  procedure Local1;',
+    '  begin',
+    '  end;',
+    '  procedure Local2;',
+    '  begin',
+    '  end;',
+    'begin',
+    'end;',
+    'procedure After;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const names = analyze(src).implementationMethods.map((d) => d.name);
+  assert.deepEqual(names, ['Outer', 'After']);
+  assert.ok(!names.includes('Local1'));
+  assert.ok(!names.includes('Local2'));
+});
+
+test('extractParamTypes keeps arity for untyped formals', () => {
+  assert.deepEqual(extractParamTypes('const Source; var Dest; Count: NativeInt'), [
+    '?',
+    '?',
+    'nativeint',
+  ]);
+  assert.deepEqual(extractParamTypes('const A, B; C: Integer'), ['?', '?', 'integer']);
+});
+
+test('methodAtPosition respects signature end column', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  T = class',
+    '    procedure A; procedure B;',
+    '  end;',
+    'implementation',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  // Only the first method is scanned (line-anchored), but past its ';' must not hit
+  const a = model.interfaceMethods.find((d) => d.name === 'A');
+  assert.ok(a);
+  assert.equal(methodAtPosition(model, a.line, a.col + 1), a);
+  assert.equal(methodAtPosition(model, a.line, a.signatureEndCol + 1), null);
 });
 
 test('countBlockDelta counts begin/end style blocks', () => {

@@ -37,38 +37,44 @@ function resolveScheme(scheme) {
     : 'delphiDark';
 }
 
+function isDelphiRule(rule) {
+  const scopes = Array.isArray(rule.scope) ? rule.scope : [rule.scope];
+  return scopes.some((s) => typeof s === 'string' && s.endsWith('.delphi'));
+}
+
+function loadSchemeRules(scheme) {
+  const file = SCHEME_FILE[scheme];
+  if (!file) return [];
+  const json = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '..', 'themes', file), 'utf8')
+  );
+  return Array.isArray(json.tokenColors) ? json.tokenColors : [];
+}
+
 /**
  * Apply the selected syntax color scheme for Delphi files only.
  *
- * The scheme's token rules are written to `editor.tokenColorCustomizations`
- * (a registered, supported setting). Because every rule only targets
- * `*.delphi` scopes — which no other language produces — the colors affect
- * Delphi files exclusively. The global VS Code theme and all other languages
- * stay untouched. Existing user rules with non-Delphi scopes are preserved.
+ * Only rules whose scopes end with `.delphi` are managed/rewritten; existing
+ * user `textMateRules` for other languages are preserved. Writes only when the
+ * resulting rule list would actually change, so activation / theme toggles do
+ * not thrash `settings.json`.
  */
 function applyColorScheme() {
   const scheme = resolveScheme(getConfig().colorScheme);
-  const file = SCHEME_FILE[scheme];
-  let schemeRules = [];
-  if (file) {
-    const json = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '..', 'themes', file), 'utf8')
-    );
-    schemeRules = json.tokenColors;
-  }
+  const schemeRules = loadSchemeRules(scheme);
 
   const editorCfg = vscode.workspace.getConfiguration('editor');
   const current = editorCfg.get('tokenColorCustomizations') || {};
   const existingRules = Array.isArray(current.textMateRules) ? current.textMateRules : [];
+  const nextRules = [...existingRules.filter((r) => !isDelphiRule(r)), ...schemeRules];
 
-  const isDelphiRule = (rule) => {
-    const scopes = Array.isArray(rule.scope) ? rule.scope : [rule.scope];
-    return scopes.some((s) => typeof s === 'string' && s.endsWith('.delphi'));
-  };
+  if (JSON.stringify(existingRules) === JSON.stringify(nextRules)) {
+    return Promise.resolve();
+  }
 
   const next = {
     ...current,
-    textMateRules: [...existingRules.filter((r) => !isDelphiRule(r)), ...schemeRules],
+    textMateRules: nextRules,
   };
 
   return editorCfg
@@ -77,23 +83,13 @@ function applyColorScheme() {
 }
 
 function activate(context) {
-  const nav = getConfig().navigation;
-
-  const register = (command, fn) => {
-    context.subscriptions.push(vscode.commands.registerTextEditorCommand(command, fn));
-  };
-
-  if (nav.goToImplementation) {
-    register('delphi.goToImplementation', goToImplementation);
-  }
-  if (nav.goToDeclaration) {
-    register('delphi.goToDeclaration', goToDeclaration);
-  }
-  if (nav.nextPreviousMethod) {
-    register('delphi.nextMethod', nextMethod);
-    register('delphi.previousMethod', previousMethod);
-  }
+  // Always register commands; feature flags are checked at invocation time so
+  // setting changes take effect without reloading the window.
   context.subscriptions.push(
+    vscode.commands.registerTextEditorCommand('delphi.goToImplementation', goToImplementation),
+    vscode.commands.registerTextEditorCommand('delphi.goToDeclaration', goToDeclaration),
+    vscode.commands.registerTextEditorCommand('delphi.nextMethod', nextMethod),
+    vscode.commands.registerTextEditorCommand('delphi.previousMethod', previousMethod),
     vscode.commands.registerCommand('delphi.selectColorScheme', selectColorScheme),
     vscode.commands.registerCommand('delphi.selectKeybindingStyle', selectKeybindingStyle)
   );
@@ -105,7 +101,6 @@ function activate(context) {
     )
   );
 
-  // Color scheme selection
   applyColorScheme();
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
@@ -114,7 +109,6 @@ function activate(context) {
       }
     }),
     vscode.window.onDidChangeActiveColorTheme(() => {
-      // `auto` must follow the user when they switch between light/dark themes
       if (getConfig().colorScheme === 'auto') {
         applyColorScheme();
       }
@@ -126,4 +120,4 @@ function deactivate() {
   // nothing to clean up
 }
 
-module.exports = { activate, deactivate };
+module.exports = { activate, deactivate, applyColorScheme, resolveScheme };
