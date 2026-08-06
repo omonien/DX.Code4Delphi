@@ -13,6 +13,7 @@ Status as of **2026-08-07**. Do **not** store PAT secrets in this repository.
 | **Manage UI** | https://marketplace.visualstudio.com/manage/publishers/DeveloperExperts |
 | **First published** | 2026-08-06 (manual VSIX upload of 1.3.3) |
 | **Status** | Public, validated |
+| **GitHub repo** | https://github.com/omonien/DX.Code4Delphi (renamed from `DX.Code4DelphiX`; old URL redirects) |
 
 ## Personal Access Token (CLI / `vsce`)
 
