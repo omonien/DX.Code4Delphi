@@ -2,7 +2,7 @@
   "name": "code4delphi",
   "displayName": "Code4Delphi — Delphi Language Support",
   "description": "Code4Delphi: modern, high quality syntax highlighting and Delphi-IDE style code navigation (Ctrl+Shift+Up/Down, Alt+Up/Down) for Delphi 13.1 and all older versions. By Developer Experts, LLC.",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "publisher": "DeveloperExperts",
   "author": "Developer Experts, LLC",
   "license": "MIT",
