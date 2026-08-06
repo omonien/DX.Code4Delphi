@@ -197,10 +197,12 @@ To change a shortcut, use `Preferences → Keyboard Shortcuts` and rebind `Delph
 
 ```sh
 npm install          # only needed for tests (vscode-textmate + vscode-oniguruma)
-npm test             # runs 49 unit tests: parser/navigation + grammar tokenizer + commands + activation
+npm test             # unit tests: parser/navigation + grammar tokenizer + commands + activation
 ```
 
 Press `F5` in VS Code to launch the Extension Development Host.
+
+Marketplace publishing (publisher `DeveloperExperts`, PAT expiry, `vsce` commands) is documented in [`docs/publishing.md`](docs/publishing.md).
 
 ## License
 
