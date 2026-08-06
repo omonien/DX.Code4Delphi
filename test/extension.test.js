@@ -162,8 +162,11 @@ test('applyColorScheme does not rewrite settings when rules are unchanged', asyn
     }
     return originalGetConfiguration(section);
   };
-  const before = delphiConfigUpdates.length;
-  await ext.applyColorScheme();
-  assert.equal(delphiConfigUpdates.length, before, 'no settings write when already applied');
-  vscodeMock.workspace.getConfiguration = originalGetConfiguration;
+  try {
+    const before = delphiConfigUpdates.length;
+    await ext.applyColorScheme();
+    assert.equal(delphiConfigUpdates.length, before, 'no settings write when already applied');
+  } finally {
+    vscodeMock.workspace.getConfiguration = originalGetConfiguration;
+  }
 });

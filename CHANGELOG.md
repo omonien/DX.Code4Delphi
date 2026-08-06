@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Commands** are always registered; nav feature flags are checked at
   invocation time (no reload needed after toggling settings).
 - Marketplace categories no longer claim Formatters/Snippets.
+- **Multiple nested locals** before an outer `begin` stay unindexed (indented-begin fix no longer mis-classifies a second local as a top-level method).
+- **Untyped formals** (`const Source; var Dest`) keep arity for overload matching.
+- Analyze cache keys only on `document.version` (no `getText()` on hits).
 
 ## [1.3.2] — 2025-08-04
 

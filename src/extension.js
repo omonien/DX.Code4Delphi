@@ -54,8 +54,10 @@ function loadSchemeRules(scheme) {
 /**
  * Apply the selected syntax color scheme for Delphi files only.
  *
- * Writes only when the resulting `textMateRules` would actually change, so
- * activation / theme toggles do not thrash `settings.json`.
+ * Only rules whose scopes end with `.delphi` are managed/rewritten; existing
+ * user `textMateRules` for other languages are preserved. Writes only when the
+ * resulting rule list would actually change, so activation / theme toggles do
+ * not thrash `settings.json`.
  */
 function applyColorScheme() {
   const scheme = resolveScheme(getConfig().colorScheme);

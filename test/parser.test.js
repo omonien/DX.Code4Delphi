@@ -305,6 +305,40 @@ test('indented begin does not suppress subsequent implementation methods', () =>
   assert.deepEqual(names, ['Foo', 'Bar']);
 });
 
+test('multiple nested locals before outer begin are not indexed', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'implementation',
+    'procedure Outer;',
+    '  procedure Local1;',
+    '  begin',
+    '  end;',
+    '  procedure Local2;',
+    '  begin',
+    '  end;',
+    'begin',
+    'end;',
+    'procedure After;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const names = analyze(src).implementationMethods.map((d) => d.name);
+  assert.deepEqual(names, ['Outer', 'After']);
+  assert.ok(!names.includes('Local1'));
+  assert.ok(!names.includes('Local2'));
+});
+
+test('extractParamTypes keeps arity for untyped formals', () => {
+  assert.deepEqual(extractParamTypes('const Source; var Dest; Count: NativeInt'), [
+    '?',
+    '?',
+    'nativeint',
+  ]);
+  assert.deepEqual(extractParamTypes('const A, B; C: Integer'), ['?', '?', 'integer']);
+});
+
 test('methodAtPosition respects signature end column', () => {
   const src = [
     'unit U;',

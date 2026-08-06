@@ -13,21 +13,27 @@ const {
 } = require('./parser.js');
 const { getConfig } = require('./configuration.js');
 
-/** @type {WeakMap<object, { version: *, text: string, model: object }>} */
+/** @type {WeakMap<object, { version: number|undefined, model: object }>} */
 const analyzeCache = new WeakMap();
 
 /**
- * Analyze a document, reusing the last model while document.version/text are unchanged.
+ * Analyze a document, reusing the last model while `document.version` is unchanged.
+ * VS Code bumps `version` on every edit, so we avoid `getText()` on cache hits.
+ * When `version` is missing (unit tests), always re-analyze.
  */
 function analyzeDocument(document) {
-  const text = document.getText();
   const version = document.version;
   const cached = analyzeCache.get(document);
-  if (cached && cached.version === version && cached.text === text) {
+  if (
+    cached &&
+    version !== undefined &&
+    version !== null &&
+    cached.version === version
+  ) {
     return cached.model;
   }
-  const model = analyze(text);
-  analyzeCache.set(document, { version, text, model });
+  const model = analyze(document.getText());
+  analyzeCache.set(document, { version, model });
   return model;
 }
 

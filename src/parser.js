@@ -187,6 +187,20 @@ function normalizeType(t) {
   return t.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+/** Sentinel type for untyped formals (`const Source; var Dest`). */
+const UNTYPED_PARAM = '?';
+
+/**
+ * Count comma-separated formal names in a parameter group (left of `:` or whole
+ * untyped group), stripping leading const/var/out/ref on each name.
+ */
+function countFormalNames(left) {
+  const names = splitTopLevel(left, ',')
+    .map((s) => s.trim().replace(/^(?:const|var|out|ref)\s+/i, '').trim())
+    .filter(Boolean);
+  return Math.max(1, names.length);
+}
+
 /** Extract normalized parameter type list from the text between ( ). */
 function extractParamTypes(inner) {
   const types = [];
@@ -195,16 +209,18 @@ function extractParamTypes(inner) {
     if (!part) continue;
     part = part.replace(/^(?:const|var|out|ref)\s+/i, '');
     const colon = lastTopLevelColon(part);
-    if (colon < 0) continue;
+    if (colon < 0) {
+      // Untyped formals (e.g. Move's `const Source; var Dest`) — keep arity
+      const count = countFormalNames(part);
+      for (let n = 0; n < count; n++) types.push(UNTYPED_PARAM);
+      continue;
+    }
     const left = part.slice(0, colon).trim();
     const type = part.slice(colon + 1).trim();
     const norm = normalizeType(type);
     if (!norm) continue;
     // `A, B: Integer` is two formals — expand so overload matching stays accurate
-    const names = splitTopLevel(left, ',')
-      .map((s) => s.trim().replace(/^(?:const|var|out|ref)\s+/i, '').trim())
-      .filter(Boolean);
-    const count = Math.max(1, names.length);
+    const count = countFormalNames(left);
     for (let n = 0; n < count; n++) types.push(norm);
   }
   return types;
@@ -333,47 +349,63 @@ function scanImplDecls(source, masked, lineStarts, startLine, endLine) {
   const methods = [];
   const maskLines = masked.split('\n');
   let depth = 0;
-  // A method recorded at depth 0 is "awaiting its begin". Local routines
-  // declared between the method header and its begin are skipped.
+  // After a top-level method header we await its body. Nested local routines
+  // declared before that body must not be indexed and must not clear the wait.
   let awaitingBody = false;
+  let nestedLocals = 0;
   for (let i = startLine; i < endLine; i++) {
     const line = maskLines[i];
     const trimmed = line.trimStart();
     const indent = line.length - trimmed.length;
-    if (depth === 0 && trimmed.length > 0 && !awaitingBody) {
+    if (depth === 0 && trimmed.length > 0) {
       const m = trimmed.match(IMPL_METHOD_RE);
       if (m) {
-        const name = m[3] || m[2];
-        const className = m[3] ? m[2] : null;
-        const col = indent + m.index + m[0].length - name.length;
-        const offset = lineStarts[i] + col + name.length;
-        const sig = readSignature(source, masked, offset, lineStarts, i);
-        methods.push(new Decl({
-          section: 'implementation',
-          kind: m[1].toLowerCase(),
-          name,
-          className,
-          line: i,
-          col,
-          nameLen: name.length,
-          params: sig.params,
-          paramsText: sig.paramsText,
-          returnType: sig.returnType,
-          signatureEndLine: sig.endLine,
-          signatureEndCol: sig.endCol,
-        }));
-        const after = trimmed.slice(m[0].length);
-        if (!/\bbegin\b/.test(after) && !/\b(forward|external)\b/.test(after)) {
-          awaitingBody = true;
+        if (!awaitingBody && nestedLocals === 0) {
+          const name = m[3] || m[2];
+          const className = m[3] ? m[2] : null;
+          const col = indent + m.index + m[0].length - name.length;
+          const offset = lineStarts[i] + col + name.length;
+          const sig = readSignature(source, masked, offset, lineStarts, i);
+          methods.push(new Decl({
+            section: 'implementation',
+            kind: m[1].toLowerCase(),
+            name,
+            className,
+            line: i,
+            col,
+            nameLen: name.length,
+            params: sig.params,
+            paramsText: sig.paramsText,
+            returnType: sig.returnType,
+            signatureEndLine: sig.endLine,
+            signatureEndCol: sig.endCol,
+          }));
+          const after = trimmed.slice(m[0].length);
+          if (!/\bbegin\b/.test(after) && !/\b(forward|external)\b/.test(after)) {
+            awaitingBody = true;
+          }
+        } else if (awaitingBody) {
+          // Local routine declared before the outer begin
+          nestedLocals++;
+          const after = trimmed.slice(m[0].length);
+          // Same-line begin/end is handled purely by block depth below
+          if (/\b(forward|external)\b/.test(after)) {
+            nestedLocals = Math.max(0, nestedLocals - 1);
+          }
         }
       }
     }
     const delta = countBlockDelta(line);
-    // Body starts at the first block-open while still at depth 0 (indent may be > 0).
-    if (delta > 0 && depth === 0 && awaitingBody) {
+    const prevDepth = depth;
+    // Outer body opens only when no nested local is still open
+    if (delta > 0 && depth === 0 && awaitingBody && nestedLocals === 0) {
       awaitingBody = false;
     }
     depth = Math.max(0, depth + delta);
+    // A nested local's body closed when depth returns to 0
+    if (prevDepth > 0 && depth === 0 && nestedLocals > 0) {
+      nestedLocals--;
+    }
   }
   return methods;
 }
