@@ -5,7 +5,12 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const { parseDfm } = require('../src/formLayout/parser.js');
+const {
+  parseDfm,
+  getTextProperties,
+  isBinaryPropertyName,
+  isTextPropertyValue,
+} = require('../src/formLayout/parser.js');
 const { FormNode } = require('../src/formLayout/model.js');
 const { applyAlignLayout, detectFramework } = require('../src/formLayout/layoutEngine.js');
 
@@ -344,5 +349,71 @@ describe('FormNode model', () => {
     assert.ok(names.includes('PanelTop'));
     assert.ok(names.includes('Button1'));
     assert.ok(!names.includes('Form1'));
+  });
+});
+
+describe('text property inspector', () => {
+  test('isBinaryPropertyName detects Picture, Glyph, Data paths', () => {
+    assert.equal(isBinaryPropertyName('Picture'), true);
+    assert.equal(isBinaryPropertyName('Glyph'), true);
+    assert.equal(isBinaryPropertyName('Picture.Data'), true);
+    assert.equal(isBinaryPropertyName('Caption'), false);
+    assert.equal(isBinaryPropertyName('Align'), false);
+    assert.equal(isBinaryPropertyName('Font.Name'), false);
+  });
+
+  test('isTextPropertyValue rejects braces and angle brackets', () => {
+    assert.equal(isTextPropertyValue("'OK'"), true);
+    assert.equal(isTextPropertyValue('alClient'), true);
+    assert.equal(isTextPropertyValue('True'), true);
+    assert.equal(isTextPropertyValue('{'), false);
+    assert.equal(isTextPropertyValue('<'), false);
+    assert.equal(isTextPropertyValue(''), false);
+  });
+
+  test('parser stores Caption and skips binary Picture block', () => {
+    const text = `
+object Form1: TForm1
+  ClientWidth = 100
+  ClientHeight = 80
+  object Image1: TImage
+    Left = 0
+    Top = 0
+    Width = 50
+    Height = 50
+    Caption = 'Hello'
+    Picture.Data = {
+      07544269746D6170}
+    Align = alClient
+  end
+end
+`;
+    const root = parseDfm(text);
+    const img = findChild(root, 'Image1');
+    assert.ok(img);
+    assert.equal(img.properties.Caption, "'Hello'");
+    assert.equal(img.properties.Align, 'alClient');
+    assert.equal(img.properties['Picture.Data'], undefined);
+    assert.equal(img.align, 'Client');
+
+    const props = getTextProperties(img);
+    const names = props.map((p) => p.name);
+    assert.ok(names.includes('Caption'));
+    assert.ok(names.includes('Align'));
+    assert.ok(!names.includes('Picture.Data'));
+  });
+
+  test('getTextProperties returns sorted name/value pairs from SimpleVcl', () => {
+    const root = parseDfm(fixture('SimpleVcl.dfm'));
+    const top = findChild(root, 'PanelTop');
+    const props = getTextProperties(top);
+    assert.ok(props.length > 0);
+    assert.ok(props.every((p) => typeof p.name === 'string' && typeof p.value === 'string'));
+    for (let i = 1; i < props.length; i++) {
+      assert.ok(props[i - 1].name.localeCompare(props[i].name, undefined, { sensitivity: 'base' }) <= 0);
+    }
+    const caption = props.find((p) => p.name === 'Caption');
+    assert.ok(caption);
+    assert.equal(caption.value, "'Top'");
   });
 });
