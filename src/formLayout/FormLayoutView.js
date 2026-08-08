@@ -2,13 +2,13 @@
 
 const vscode = require('vscode');
 const path = require('path');
-const { parseDfm } = require('./parser.js');
+const { parseDfm, getTextProperties } = require('./parser.js');
 const { applyAlignLayout } = require('./layoutEngine.js');
-const { DomRenderProvider } = require('./render/DomRenderProvider.js');
 
 /**
  * Manages a single Form Layout webview panel for a given document.
  * Selection state lives here; the render provider is pluggable.
+ * MVP: box layout + read-only text property inspector (no binary props).
  */
 class FormLayoutView {
   /**
@@ -40,7 +40,6 @@ class FormLayoutView {
 
     this.panel.onDidDispose(() => this.dispose(), null, context.subscriptions);
 
-    // Re-parse when the source document changes
     this._changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() === this.document.uri.toString()) {
         this._refreshFromDocument();
@@ -65,7 +64,6 @@ class FormLayoutView {
     try {
       this.root = parseDfm(this.document.getText());
       if (this.root) {
-        // Prefer framework hint from file extension; fall back to auto-detect
         const ext = path.extname(this.document.fileName).toLowerCase();
         const framework = ext === '.fmx' ? 'fmx' : (ext === '.dfm' ? 'vcl' : 'auto');
         applyAlignLayout(this.root, { framework });
@@ -90,21 +88,40 @@ class FormLayoutView {
     return set;
   }
 
+  /**
+   * Build a flat map id → text properties for the inspector (sent once with the tree).
+   * @returns {Record<string, { name: string, value: string }[]>}
+   */
+  _buildPropertiesMap() {
+    /** @type {Record<string, { name: string, value: string }[]>} */
+    const map = {};
+    if (!this.root) return map;
+    this.root.walk((n) => {
+      map[n.id] = getTextProperties(n);
+    });
+    return map;
+  }
+
   _updateHtml() {
     const state = {
       selectedId: this.selectedId,
       highlightedIds: Array.from(this._buildHighlightedIds()),
     };
-
-    this.panel.webview.html = this._getHtml(this.root, state);
+    this.panel.webview.html = this._getHtml(this.root, state, this._buildPropertiesMap());
   }
 
-  _getHtml(root, state) {
+  /**
+   * @param {import('./model').FormNode|null} root
+   * @param {{ selectedId: string|null, highlightedIds: string[] }} state
+   * @param {Record<string, { name: string, value: string }[]>} propertiesMap
+   */
+  _getHtml(root, state, propertiesMap) {
     const treeJson = JSON.stringify(root, (key, value) => {
       if (key === 'parent') return undefined;
       return value;
     });
     const stateJson = JSON.stringify(state);
+    const propsJson = JSON.stringify(propertiesMap);
     const nonce = getNonce();
 
     return `<!DOCTYPE html>
@@ -116,54 +133,65 @@ class FormLayoutView {
   <title>Form Layout</title>
   <style nonce="${nonce}">
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
-    #host { width: 100%; height: 100%; }
     ${INLINE_CSS}
   </style>
 </head>
 <body>
-  <div id="host"></div>
+  <div id="app">
+    <div id="layout-pane">
+      <div id="host"></div>
+    </div>
+    <div id="inspector-pane">
+      <div id="inspector-header">Properties</div>
+      <div id="inspector-subtitle"></div>
+      <div id="inspector-body">
+        <div class="c4d-inspector-empty">Select a control to view its text properties.</div>
+      </div>
+    </div>
+  </div>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
-    const root = ${treeJson};
-    let state = ${stateJson};
+    const tree = ${treeJson};
+    const initialState = ${stateJson};
+    const propertiesMap = ${propsJson};
 
-    function select(id) {
-      state.selectedId = id;
-      const highlighted = new Set();
-      if (id && root) {
-        const node = findById(root, id);
-        if (node) {
-          highlighted.add(node.id);
-          collectDescendants(node, highlighted);
+    function rehydrate(node, parent) {
+      if (!node) return null;
+      parent = parent || null;
+      node.parent = parent;
+      node.id = node.name || ((parent && parent.id) ? parent.id + '::' + node.className : node.className);
+      node.descendants = [];
+      node.children = (node.children || []).map(function(c) { return rehydrate(c, node); });
+      function collect(n, list) {
+        for (var i = 0; i < n.children.length; i++) {
+          list.push(n.children[i]);
+          collect(n.children[i], list);
         }
       }
-      state.highlightedIds = Array.from(highlighted);
-      render();
-      vscode.postMessage({ type: 'select', nodeId: id });
+      collect(node, node.descendants);
+      node.findById = function(id) {
+        if (this.id === id) return this;
+        for (var i = 0; i < this.children.length; i++) {
+          var f = this.children[i].findById(id);
+          if (f) return f;
+        }
+        return null;
+      };
+      return node;
     }
+    const root = rehydrate(tree);
 
-    function findById(node, id) {
-      if (!node) return null;
-      if (node.id === id) return node;
-      for (const c of (node.children || [])) {
-        const f = findById(c, id);
-        if (f) return f;
-      }
-      return null;
-    }
+    const host = document.getElementById('host');
+    const inspectorBody = document.getElementById('inspector-body');
+    const inspectorSubtitle = document.getElementById('inspector-subtitle');
+    let selectedId = initialState.selectedId || null;
+    let highlightedIds = new Set(initialState.highlightedIds || []);
 
-    function collectDescendants(node, set) {
-      for (const c of (node.children || [])) {
-        set.add(c.id);
-        collectDescendants(c, set);
-      }
-    }
-
-    function render() {
-      const host = document.getElementById('host');
+    function renderLayout() {
       host.innerHTML = '';
+      host.className = 'c4d-formlayout-host';
       if (!root) {
-        host.innerHTML = '<div class="c4d-empty">No form structure found.</div>';
+        host.innerHTML = '<div class="c4d-empty">No form structure found in this file.</div>';
         return;
       }
       const viewport = document.createElement('div');
@@ -183,10 +211,10 @@ class FormLayoutView {
       const el = document.createElement('div');
       el.className = 'c4d-box';
       el.dataset.nodeId = node.id;
-      if (node.id === state.selectedId) el.classList.add('c4d-selected');
-      else if (state.highlightedIds && state.highlightedIds.indexOf(node.id) >= 0) el.classList.add('c4d-highlight-child');
+      if (node.id === selectedId) el.classList.add('c4d-selected');
+      else if (highlightedIds.has(node.id)) el.classList.add('c4d-highlight-child');
 
-      const b = node.bounds || {};
+      const b = node.bounds || { left: 0, top: 0, width: 0, height: 0 };
       if (isRoot) {
         el.style.left = '0'; el.style.top = '0';
         el.style.width = '100%'; el.style.height = '100%';
@@ -205,22 +233,94 @@ class FormLayoutView {
       label.title = (node.name || '') + ' : ' + node.className + alignSuffix;
       el.appendChild(label);
 
-      el.addEventListener('click', (ev) => {
+      el.addEventListener('click', function(ev) {
         ev.stopPropagation();
         select(node.id);
       });
-      el.addEventListener('dblclick', (ev) => {
+      el.addEventListener('dblclick', function(ev) {
         ev.stopPropagation();
         vscode.postMessage({ type: 'goto', nodeId: node.id });
       });
 
       parentEl.appendChild(el);
-      for (const child of (node.children || [])) {
-        buildNode(child, el, false);
+      for (var i = 0; i < (node.children || []).length; i++) {
+        buildNode(node.children[i], el, false);
       }
     }
 
-    render();
+    function renderInspector(id) {
+      inspectorBody.innerHTML = '';
+      if (!id || !root) {
+        inspectorSubtitle.textContent = '';
+        inspectorBody.innerHTML = '<div class="c4d-inspector-empty">Select a control to view its text properties.</div>';
+        return;
+      }
+      const node = root.findById(id);
+      if (!node) {
+        inspectorSubtitle.textContent = '';
+        inspectorBody.innerHTML = '<div class="c4d-inspector-empty">Select a control to view its text properties.</div>';
+        return;
+      }
+      const title = (node.name || '(unnamed)') + ' : ' + (node.className || '');
+      inspectorSubtitle.textContent = title;
+
+      const props = propertiesMap[id] || propertiesMap[node.id] || [];
+      if (!props.length) {
+        inspectorBody.innerHTML = '<div class="c4d-inspector-empty">No text properties on this control.</div>';
+        return;
+      }
+      const table = document.createElement('table');
+      table.className = 'c4d-prop-table';
+      for (var i = 0; i < props.length; i++) {
+        const row = document.createElement('tr');
+        const nameTd = document.createElement('td');
+        nameTd.className = 'c4d-prop-name';
+        nameTd.textContent = props[i].name;
+        nameTd.title = props[i].name;
+        const valueTd = document.createElement('td');
+        valueTd.className = 'c4d-prop-value';
+        valueTd.textContent = props[i].value;
+        valueTd.title = props[i].value;
+        row.appendChild(nameTd);
+        row.appendChild(valueTd);
+        table.appendChild(row);
+      }
+      inspectorBody.appendChild(table);
+    }
+
+    function select(id) {
+      selectedId = id;
+      highlightedIds = new Set();
+      if (root) {
+        const n = root.findById(id);
+        if (n) {
+          highlightedIds.add(n.id);
+          for (var i = 0; i < n.descendants.length; i++) {
+            highlightedIds.add(n.descendants[i].id);
+          }
+        }
+      }
+      host.querySelectorAll('.c4d-box').forEach(function(el) {
+        const nid = el.dataset.nodeId;
+        el.classList.toggle('c4d-selected', nid === selectedId);
+        el.classList.toggle('c4d-highlight-child', nid !== selectedId && highlightedIds.has(nid));
+      });
+      renderInspector(id);
+      vscode.postMessage({ type: 'select', nodeId: id });
+    }
+
+    host.addEventListener('click', function() {
+      selectedId = null;
+      highlightedIds = new Set();
+      host.querySelectorAll('.c4d-box').forEach(function(el) {
+        el.classList.remove('c4d-selected', 'c4d-highlight-child');
+      });
+      renderInspector(null);
+      vscode.postMessage({ type: 'select', nodeId: null });
+    });
+
+    renderLayout();
+    if (selectedId) renderInspector(selectedId);
   </script>
 </body>
 </html>`;
@@ -230,22 +330,29 @@ class FormLayoutView {
     if (!msg || !msg.type) return;
     if (msg.type === 'select') {
       this.selectedId = msg.nodeId || null;
-      // selection already reflected in webview; optional host-side tracking
     } else if (msg.type === 'goto') {
-      const node = this.root && this.root.findById(msg.nodeId);
-      if (node && typeof node.startLine === 'number') {
-        const pos = new vscode.Position(node.startLine, 0);
-        vscode.window.showTextDocument(this.document, {
-          selection: new vscode.Range(pos, pos),
-          preview: false,
-        });
-      }
+      this._gotoSource(msg.nodeId);
     }
   }
 
+  _gotoSource(nodeId) {
+    if (!this.root || !nodeId) return;
+    const node = this.root.findById(nodeId);
+    if (!node) return;
+    const line = Math.max(0, node.startLine || 0);
+    const pos = new vscode.Position(line, 0);
+    vscode.window.showTextDocument(this.document, {
+      viewColumn: vscode.ViewColumn.One,
+      selection: new vscode.Range(pos, pos),
+      preview: false,
+    });
+  }
+
   dispose() {
-    if (this._changeSub) this._changeSub.dispose();
-    if (this.panel) this.panel.dispose();
+    if (this._changeSub) {
+      this._changeSub.dispose();
+      this._changeSub = null;
+    }
   }
 }
 
@@ -259,11 +366,102 @@ function getNonce() {
 }
 
 const INLINE_CSS = `
-  .c4d-formlayout-host, #host {
-    position: relative; width: 100%; height: 100%; overflow: auto;
+  #app {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
     background: var(--vscode-editor-background, #1e1e1e);
     color: var(--vscode-editor-foreground, #cccccc);
-    font-family: var(--vscode-font-family, system-ui, sans-serif); font-size: 12px;
+    font-family: var(--vscode-font-family, system-ui, sans-serif);
+    font-size: 12px;
+  }
+  #layout-pane {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  #host {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+  }
+  #inspector-pane {
+    flex: 0 0 280px;
+    width: 280px;
+    max-width: 40%;
+    height: 100%;
+    border-left: 1px solid var(--vscode-panel-border, #3c3c3c);
+    background: var(--vscode-sideBar-background, #252526);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #inspector-header {
+    flex: 0 0 auto;
+    padding: 8px 12px 4px;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--vscode-descriptionForeground, #9d9d9d);
+  }
+  #inspector-subtitle {
+    flex: 0 0 auto;
+    padding: 0 12px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--vscode-editor-foreground, #cccccc);
+  }
+  #inspector-body {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 0 0 8px;
+  }
+  .c4d-inspector-empty {
+    padding: 12px 16px;
+    opacity: 0.65;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .c4d-prop-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .c4d-prop-table tr:hover {
+    background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.06));
+  }
+  .c4d-prop-name {
+    width: 42%;
+    padding: 4px 8px 4px 12px;
+    vertical-align: top;
+    color: var(--vscode-symbolIcon-propertyForeground, #9cdcfe);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 11px;
+  }
+  .c4d-prop-value {
+    width: 58%;
+    padding: 4px 12px 4px 4px;
+    vertical-align: top;
+    color: var(--vscode-editor-foreground, #cccccc);
+    word-break: break-word;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 11px;
+  }
+  .c4d-formlayout-host {
+    position: relative; width: 100%; height: 100%; overflow: auto;
+    background: var(--vscode-editor-background, #1e1e1e);
   }
   .c4d-empty { padding: 24px; opacity: 0.7; }
   .c4d-viewport { padding: 16px; min-width: 100%; min-height: 100%; box-sizing: border-box; }
