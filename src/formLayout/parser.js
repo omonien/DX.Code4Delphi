@@ -83,10 +83,15 @@ function parseDfm(text) {
       const propName = propMatch[1];
       let valueStr = propMatch[2].trim();
 
-      // Multi-line values (strings, binary, collections) – skip content until we can
-      // reasonably continue. We only care about simple numeric layout props.
-      if (valueStr === '' || valueStr.endsWith('{') || valueStr.startsWith('<') || valueStr.startsWith('(')) {
-        // consume until matching end-ish; very simplified
+      // Multi-line / binary / collection values – skip without storing
+      if (
+        isBinaryPropertyName(propName) ||
+        valueStr === '' ||
+        valueStr.endsWith('{') ||
+        valueStr.startsWith('{') ||
+        valueStr.startsWith('<') ||
+        valueStr.startsWith('(')
+      ) {
         i = skipComplexValue(lines, i);
         continue;
       }
@@ -97,8 +102,10 @@ function parseDfm(text) {
 
       const current = stack[stack.length - 1];
       applyLayoutProperty(current, propName, valueStr);
-      // keep raw for future use
-      current.properties[propName] = valueStr;
+      // Only single-line text properties (no binary) for the inspector
+      if (isTextPropertyValue(valueStr)) {
+        current.properties[propName] = valueStr;
+      }
       i++;
       continue;
     }
@@ -244,4 +251,63 @@ function skipComplexValue(lines, startIdx) {
   return i;
 }
 
-module.exports = { parseDfm };
+/**
+ * Property names that typically hold binary or large streamed data in DFM/FMX.
+ * Matched case-insensitively against the full property path (e.g. Picture.Data).
+ */
+const BINARY_PROP_NAMES = [
+  'picture', 'glyph', 'bitmap', 'image', 'icon', 'blob',
+  'pngimage', 'jpegimage', 'metafile', 'wmf', 'emf',
+  'data', 'imagedata', 'picture.data', 'glyph.data',
+  'bitmap.data', 'items.data', 'imagelist',
+];
+
+function isBinaryPropertyName(propName) {
+  if (!propName) return false;
+  const p = String(propName).toLowerCase();
+  if (BINARY_PROP_NAMES.includes(p)) return true;
+  // path ends with a binary segment (e.g. Some.Picture.Data)
+  const parts = p.split('.');
+  const last = parts[parts.length - 1];
+  if (BINARY_PROP_NAMES.includes(last)) return true;
+  if (parts.some((seg) => BINARY_PROP_NAMES.includes(seg) && seg !== 'data')) {
+    // e.g. Picture.Data → picture is binary-ish
+    return parts.some((seg) =>
+      ['picture', 'glyph', 'bitmap', 'image', 'icon', 'pngimage', 'jpegimage', 'metafile'].includes(seg)
+    );
+  }
+  return false;
+}
+
+/**
+ * True if the value is safe to show as a single-line text property.
+ */
+function isTextPropertyValue(valueStr) {
+  if (valueStr == null) return false;
+  const s = String(valueStr).trim();
+  if (!s) return false;
+  if (s.startsWith('{') || s.endsWith('{') || s.startsWith('<') || s.startsWith('(')) return false;
+  // reject long hex-looking blobs that slipped through as one line
+  if (s.length > 200 && /^[0-9A-Fa-f\s]+$/.test(s)) return false;
+  return true;
+}
+
+/**
+ * Sorted list of { name, value } for the read-only property inspector.
+ * @param {import('./model').FormNode} node
+ * @returns {{ name: string, value: string }[]}
+ */
+function getTextProperties(node) {
+  if (!node || !node.properties) return [];
+  return Object.keys(node.properties)
+    .filter((k) => !isBinaryPropertyName(k) && isTextPropertyValue(node.properties[k]))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+    .map((name) => ({ name, value: String(node.properties[name]) }));
+}
+
+module.exports = {
+  parseDfm,
+  getTextProperties,
+  isBinaryPropertyName,
+  isTextPropertyValue,
+};
