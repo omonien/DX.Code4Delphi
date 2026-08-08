@@ -33,15 +33,24 @@ class FormNode {
     endLine = 0,
     children = [],
     properties = {},
+    align = 'None',
   } = {}) {
     this.name = name;
     this.className = className;
     this.kind = kind;
     this.bounds = { ...bounds };
+    /** Original bounds as stored in the DFM/FMX (before Align simulation) */
+    this.storedBounds = { ...bounds };
     this.startLine = startLine;
     this.endLine = endLine;
     this.children = children;
     this.properties = properties;
+    /**
+     * Normalized Align value.
+     * VCL alTop → 'Top', FMX MostTop → 'MostTop', etc.
+     * Default 'None'.
+     */
+    this.align = align || 'None';
     /** @type {FormNode|null} */
     this.parent = null;
   }
