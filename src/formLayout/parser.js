@@ -106,6 +106,13 @@ function parseDfm(text) {
     i++;
   }
 
+  // Snapshot original bounds before any layout simulation
+  if (root) {
+    root.walk((n) => {
+      n.storedBounds = { ...n.bounds };
+    });
+  }
+
   // If the file never closed the root, still return what we have
   return root;
 }
@@ -115,10 +122,16 @@ function parseDfm(text) {
  * Supports classic VCL (Left/Top/Width/Height) and common FMX (Position.X/Y, Size.Width/Height).
  */
 function applyLayoutProperty(node, propName, valueStr) {
+  const p = propName.toLowerCase();
+
+  // Align (string enum) – handle before numeric parse
+  if (p === 'align') {
+    node.align = normalizeAlign(valueStr);
+    return;
+  }
+
   const num = parseNumber(valueStr);
   if (num === null) return;
-
-  const p = propName.toLowerCase();
 
   switch (p) {
     case 'left':
@@ -155,6 +168,49 @@ function applyLayoutProperty(node, propName, valueStr) {
     default:
       break;
   }
+}
+
+/**
+ * Normalize VCL (alTop) and FMX (Top / MostTop / …) Align values
+ * into a common set of strings used by the layout engine.
+ */
+function normalizeAlign(raw) {
+  if (!raw) return 'None';
+  let s = String(raw).trim();
+  // strip quotes if present
+  if ((s.startsWith("'") && s.endsWith("'")) || (s.startsWith('"') && s.endsWith('"'))) {
+    s = s.slice(1, -1);
+  }
+  // VCL style prefix
+  if (s.toLowerCase().startsWith('al')) {
+    s = s.slice(2);
+  }
+  // Canonical casing
+  const map = {
+    none: 'None',
+    top: 'Top',
+    bottom: 'Bottom',
+    left: 'Left',
+    right: 'Right',
+    client: 'Client',
+    custom: 'Custom',
+    mosttop: 'MostTop',
+    mostbottom: 'MostBottom',
+    mostleft: 'MostLeft',
+    mostright: 'MostRight',
+    contents: 'Contents',
+    center: 'Center',
+    vertcenter: 'VertCenter',
+    horzcenter: 'HorzCenter',
+    horizontal: 'Horizontal',
+    vertical: 'Vertical',
+    scale: 'Scale',
+    fit: 'Fit',
+    fitleft: 'FitLeft',
+    fitright: 'FitRight',
+  };
+  const key = s.toLowerCase();
+  return map[key] || s; // keep unknown values as-is
 }
 
 function parseNumber(s) {
