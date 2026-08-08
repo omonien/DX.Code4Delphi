@@ -13,6 +13,7 @@ const {
   selectColorScheme,
   selectKeybindingStyle,
 } = require('./commands.js');
+const { registerFormLayout } = require('./formLayout/index.js');
 
 const SCHEME_FILE = {
   fancy: 'code4delphi-fancy-color-theme.json',
@@ -93,6 +94,9 @@ function activate(context) {
     vscode.commands.registerCommand('delphi.selectColorScheme', selectColorScheme),
     vscode.commands.registerCommand('delphi.selectKeybindingStyle', selectKeybindingStyle)
   );
+
+  // DFM / FMX box-model layout visualizer (pluggable render providers)
+  registerFormLayout(context);
 
   context.subscriptions.push(
     vscode.languages.registerFoldingRangeProvider(
