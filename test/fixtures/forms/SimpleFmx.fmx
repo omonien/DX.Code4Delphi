@@ -1,0 +1,44 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 300
+  ClientWidth = 400
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object Toolbar1: TToolBar
+    Align = Top
+    Size.Width = 400.000000000000000000
+    Size.Height = 48.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object StatusBar1: TStatusBar
+    Align = Bottom
+    Position.Y = 278.000000000000000000
+    Size.Width = 400.000000000000000000
+    Size.Height = 22.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object LayoutSide: TLayout
+    Align = MostLeft
+    Size.Width = 120.000000000000000000
+    Size.Height = 230.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object LayoutClient: TLayout
+    Align = Client
+    Size.Width = 280.000000000000000000
+    Size.Height = 230.000000000000000000
+    Size.PlatformDefault = False
+    object Button1: TButton
+      Position.X = 16.000000000000000000
+      Position.Y = 16.000000000000000000
+      Size.Width = 80.000000000000000000
+      Size.Height = 32.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'Button1'
+    end
+  end
+end
