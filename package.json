@@ -36,7 +36,8 @@
     "theme": "light"
   },
   "activationEvents": [
-    "onLanguage:delphi"
+    "onLanguage:delphi",
+    "onCommand:delphi.showFormLayout"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -61,6 +62,18 @@
           "*.dpr"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "delphi-form",
+        "aliases": [
+          "Delphi Form",
+          "DFM",
+          "FMX"
+        ],
+        "extensions": [
+          ".dfm",
+          ".fmx"
+        ]
       }
     ],
     "grammars": [
@@ -99,6 +112,11 @@
       {
         "command": "delphi.selectKeybindingStyle",
         "title": "Select Keybinding Style",
+        "category": "Code4Delphi"
+      },
+      {
+        "command": "delphi.showFormLayout",
+        "title": "Show Form Layout (Box Model)",
         "category": "Code4Delphi"
       }
     ],
@@ -265,7 +283,8 @@
     "test": "node --test test/*.test.js",
     "test:grammar": "node --test test/grammar.test.js",
     "test:parser": "node --test test/parser.test.js",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test:formLayout": "node --test test/formLayout.test.js"
   },
   "devDependencies": {
     "vscode-oniguruma": "1.7.0",
