@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.5] — 2026-08-07
 
+### Added
+
+- **Form layout visualizer (DFM / FMX)** — new command
+  **`Code4Delphi: Show Form Layout`** opens a side-by-side box-model view of a
+  `.dfm` / `.fmx` file (or a `.pas` with a sibling form). Controls are drawn as
+  nested rectangles, clicking one highlights it together with its descendants,
+  and double-clicking jumps to the corresponding `object` line.
+- **Align simulation** — instead of the raw design-time coordinates, a layout
+  pass approximates Delphi's Align behaviour: VCL `alTop`/`alBottom`/`alLeft`/
+  `alRight`/`alClient`, plus FMX `Most*`, `Contents` and the `Center` family.
+  The normalised Align is shown in each box label (e.g. `StatusBar1 [Bottom]`).
+- **Read-only property inspector** — text properties of the selected control,
+  with binary payloads (`Picture`, `Glyph`, `Bitmap.Data`, …) filtered out.
+- `delphi-form` language registration for `.dfm` / `.fmx`.
+
 ### Changed
 
 - **Marketplace gallery banner**: light off-white background (`#f7f8fa`) with

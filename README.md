@@ -99,7 +99,7 @@ A side-by-side webview draws the form as a **box model**:
 
 Align is normalised (`alTop` → `Top`, etc.) and shown in the box label when it is not `None` (e.g. `StatusBar1 [Bottom]`).
 
-The renderer is **pluggable**: the current implementation is DOM-based (nested absolutely positioned divs). The architecture (`IRenderProvider`) is designed so a Canvas or SVG provider can be added later without touching the parser or the view host.
+The renderer is **pluggable**: `FormLayoutView` owns the shell (inspector, selection, messaging) and delegates the drawing surface to a render provider (`IRenderProvider`). The current implementation (`DomRenderProvider`) uses nested absolutely positioned divs; a Canvas or SVG provider can be added by implementing `buildCss()` / `buildClientScript()`, without touching the parser or the view host.
 
 ## Configuration
 
@@ -139,7 +139,7 @@ To change a shortcut, use `Preferences → Keyboard Shortcuts` and rebind `Delph
 ```sh
 npm install          # only needed for tests (vscode-textmate + vscode-oniguruma)
 npm test             # unit tests: parser/navigation + grammar + form layout + commands + activation
-npm run test:formLayout   # only the DFM/FMX parser + Align layout engine
+npm run test:formLayout   # only the DFM/FMX parser + Align layout engine + webview host
 ```
 
 Press `F5` in VS Code to launch the Extension Development Host.

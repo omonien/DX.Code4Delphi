@@ -55,12 +55,18 @@ class FormNode {
     this.parent = null;
   }
 
-  /** Unique id for selection / DOM mapping */
+  /**
+   * Unique id for selection / DOM mapping.
+   *
+   * Always path-based: a bare Name is not unique, because frames and inherited
+   * forms routinely repeat the same control name under different parents
+   * (two `Button1` below two panels). A name-only id would make selection,
+   * highlighting and "go to source" resolve to the first match instead of the
+   * control the user clicked.
+   */
   get id() {
-    // Prefer name; fall back to path-like id if anonymous
-    if (this.name) return this.name;
-    const parentId = this.parent ? this.parent.id : 'root';
-    return `${parentId}::${this.className}`;
+    const own = this.name || `(${this.className})`;
+    return this.parent ? `${this.parent.id}::${own}` : own;
   }
 
   get hasExplicitBounds() {

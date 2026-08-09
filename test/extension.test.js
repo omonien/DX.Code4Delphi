@@ -92,7 +92,7 @@ Module._load = function (request, parent, isMain) {
 
 const ext = require('../src/extension.js');
 
-test('activation registers all four navigation commands', () => {
+test('activation registers all Code4Delphi commands', () => {
   ext.activate({ subscriptions: [] });
   const ids = registeredCommands.map((c) => c.id).filter((id) => id.startsWith('delphi.')).sort();
   assert.deepEqual(ids, [
@@ -102,6 +102,7 @@ test('activation registers all four navigation commands', () => {
     'delphi.previousMethod',
     'delphi.selectColorScheme',
     'delphi.selectKeybindingStyle',
+    'delphi.showFormLayout',
   ]);
 });
 

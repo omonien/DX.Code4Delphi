@@ -12,7 +12,11 @@ const {
   isTextPropertyValue,
 } = require('../src/formLayout/parser.js');
 const { FormNode } = require('../src/formLayout/model.js');
-const { applyAlignLayout, detectFramework } = require('../src/formLayout/layoutEngine.js');
+const {
+  applyAlignLayout,
+  detectFramework,
+  ensureRootSize,
+} = require('../src/formLayout/layoutEngine.js');
 
 function fixture(name) {
   return fs.readFileSync(path.join(__dirname, 'fixtures', 'forms', name), 'utf8');
@@ -111,7 +115,8 @@ describe('formLayout parser', () => {
 
   test('findById and walk work', () => {
     const root = parseDfm(fixture('SimpleVcl.dfm'));
-    const btn = root.findById('Button1');
+    const client = findChild(root, 'PanelClient');
+    const btn = root.findById(client.children[0].id);
     assert.ok(btn);
     assert.equal(btn.className, 'TButton');
 
@@ -328,19 +333,114 @@ end
   test('applyAlignLayout is a no-op on null', () => {
     assert.doesNotThrow(() => applyAlignLayout(null));
   });
+
+  test('root without Width/Height derives its size from children', () => {
+    const text = `
+object Frame1: TFrame1
+  Left = 0
+  Top = 0
+  object Body: TPanel
+    Left = 0
+    Top = 0
+    Width = 320
+    Height = 180
+  end
+end
+`;
+    const root = parseDfm(text);
+    applyAlignLayout(root, { framework: 'vcl' });
+    assert.equal(root.bounds.width, 320);
+    assert.equal(root.bounds.height, 180);
+  });
+
+  test('aligned child of a size-less root does not collapse to 1px', () => {
+    const text = `
+object Frame1: TFrame1
+  Left = 0
+  Top = 0
+  object Bar: TPanel
+    Align = alTop
+    Height = 20
+  end
+end
+`;
+    const root = parseDfm(text);
+    applyAlignLayout(root, { framework: 'vcl' });
+    const bar = findChild(root, 'Bar');
+    assert.equal(bar.bounds.height, 20);
+    assert.equal(bar.bounds.width, 400); // default form width, not 1
+  });
+
+  test('ensureRootSize keeps an explicit root size untouched', () => {
+    const root = parseDfm(fixture('SimpleVcl.dfm'));
+    ensureRootSize(root);
+    assert.equal(root.bounds.width, 400);
+    assert.equal(root.bounds.height, 300);
+  });
 });
 
 describe('FormNode model', () => {
-  test('id prefers name', () => {
+  test('id of a root node is its name', () => {
     const n = new FormNode({ name: 'Foo', className: 'TBar' });
     assert.equal(n.id, 'Foo');
   });
 
-  test('id falls back for anonymous nodes', () => {
+  test('id is path-based below a parent', () => {
     const parent = new FormNode({ name: 'P', className: 'TPanel' });
-    const child = new FormNode({ name: '', className: 'TButton', parent });
+    const child = new FormNode({ name: 'B', className: 'TButton' });
     child.parent = parent;
-    assert.equal(child.id, 'P::TButton');
+    assert.equal(child.id, 'P::B');
+  });
+
+  test('id falls back to the class name for anonymous nodes', () => {
+    const parent = new FormNode({ name: 'P', className: 'TPanel' });
+    const child = new FormNode({ name: '', className: 'TButton' });
+    child.parent = parent;
+    assert.equal(child.id, 'P::(TButton)');
+  });
+
+  test('same control name under different parents yields distinct ids', () => {
+    const text = `
+object Form1: TForm1
+  ClientWidth = 200
+  ClientHeight = 200
+  object Panel1: TPanel
+    Width = 100
+    Height = 100
+    object Button1: TButton
+      Left = 5
+      Width = 40
+      Height = 20
+    end
+  end
+  object Panel2: TPanel
+    Left = 100
+    Width = 100
+    Height = 100
+    object Button1: TButton
+      Left = 9
+      Width = 40
+      Height = 20
+    end
+  end
+end
+`;
+    const root = parseDfm(text);
+    const first = findChild(findChild(root, 'Panel1'), 'Button1');
+    const second = findChild(findChild(root, 'Panel2'), 'Button1');
+
+    assert.notEqual(first.id, second.id);
+    assert.equal(first.id, 'Form1::Panel1::Button1');
+    assert.equal(second.id, 'Form1::Panel2::Button1');
+
+    // Each id must resolve back to its own node, not to the first match.
+    assert.equal(root.findById(first.id).storedBounds.left, 5);
+    assert.equal(root.findById(second.id).storedBounds.left, 9);
+
+    // And all ids in the tree stay unique.
+    const ids = [];
+    root.walk((n) => ids.push(n.id));
+    assert.equal(new Set(ids).size, ids.length);
   });
 
   test('descendants lists all nested nodes', () => {

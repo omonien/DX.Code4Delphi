@@ -36,8 +36,7 @@
     "theme": "light"
   },
   "activationEvents": [
-    "onLanguage:delphi",
-    "onCommand:delphi.showFormLayout"
+    "onLanguage:delphi"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -284,7 +283,7 @@
     "test:grammar": "node --test test/grammar.test.js",
     "test:parser": "node --test test/parser.test.js",
     "package": "vsce package",
-    "test:formLayout": "node --test test/formLayout.test.js"
+    "test:formLayout": "node --test test/formLayout.test.js test/formLayoutView.test.js"
   },
   "devDependencies": {
     "vscode-oniguruma": "1.7.0",

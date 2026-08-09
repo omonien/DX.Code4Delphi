@@ -23,6 +23,8 @@
  * @param {import('./model').FormNode} root
  * @param {object} [options]
  * @param {'vcl'|'fmx'|'auto'} [options.framework='auto']
+ * @param {number} [options.defaultWidth=400]
+ * @param {number} [options.defaultHeight=300]
  */
 function applyAlignLayout(root, options = {}) {
   if (!root) return;
@@ -31,7 +33,38 @@ function applyAlignLayout(root, options = {}) {
     ? detectFramework(root)
     : (options.framework || 'vcl');
 
+  ensureRootSize(root, options);
   layoutNode(root, framework);
+}
+
+/**
+ * Frames and some hand-written forms carry no Width/Height (and no Client*)
+ * on the root. Laying out against a zero-sized parent would collapse every
+ * aligned child to 1px, so derive a usable canvas: the extent actually needed
+ * by the children, falling back to a sensible default form size.
+ *
+ * @param {import('./model').FormNode} root
+ * @param {{ defaultWidth?: number, defaultHeight?: number }} options
+ */
+function ensureRootSize(root, options = {}) {
+  const defaultWidth = options.defaultWidth || 400;
+  const defaultHeight = options.defaultHeight || 300;
+
+  let neededWidth = 0;
+  let neededHeight = 0;
+  for (const c of root.children || []) {
+    const b = c.storedBounds || c.bounds;
+    if (!b) continue;
+    neededWidth = Math.max(neededWidth, (b.left || 0) + (b.width || 0));
+    neededHeight = Math.max(neededHeight, (b.top || 0) + (b.height || 0));
+  }
+
+  if (!(root.bounds.width > 0)) {
+    root.bounds.width = neededWidth > 0 ? neededWidth : defaultWidth;
+  }
+  if (!(root.bounds.height > 0)) {
+    root.bounds.height = neededHeight > 0 ? neededHeight : defaultHeight;
+  }
 }
 
 /**
@@ -237,4 +270,4 @@ function placeEdgeAligned(list, client, _isMost) {
   }
 }
 
-module.exports = { applyAlignLayout, detectFramework };
+module.exports = { applyAlignLayout, detectFramework, ensureRootSize };

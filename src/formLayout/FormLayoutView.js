@@ -4,6 +4,12 @@ const vscode = require('vscode');
 const path = require('path');
 const { parseDfm, getTextProperties } = require('./parser.js');
 const { applyAlignLayout } = require('./layoutEngine.js');
+const { DomRenderProvider } = require('./render/DomRenderProvider.js');
+
+/** Available render providers, keyed by their id. */
+const RENDER_PROVIDERS = {
+  [DomRenderProvider.id]: DomRenderProvider,
+};
 
 /**
  * Manages a single Form Layout webview panel for a given document.
@@ -20,7 +26,11 @@ class FormLayoutView {
   constructor(context, document, options = {}) {
     this.context = context;
     this.document = document;
-    this.providerId = options.providerId || 'dom';
+    this.providerId = options.providerId || DomRenderProvider.id;
+
+    const Provider = RENDER_PROVIDERS[this.providerId] || DomRenderProvider;
+    /** @type {import('./render/IRenderProvider').IRenderProvider} */
+    this.renderProvider = new Provider();
 
     /** @type {import('./model').FormNode|null} */
     this.root = null;
@@ -116,13 +126,15 @@ class FormLayoutView {
    * @param {Record<string, { name: string, value: string }[]>} propertiesMap
    */
   _getHtml(root, state, propertiesMap) {
-    const treeJson = JSON.stringify(root, (key, value) => {
-      if (key === 'parent') return undefined;
-      return value;
-    });
-    const stateJson = JSON.stringify(state);
-    const propsJson = JSON.stringify(propertiesMap);
+    // `id` is a getter and would not survive JSON.stringify, so serialize it
+    // explicitly — the webview must use the exact same ids as the host, or
+    // selection and the property map would not line up.
+    const treeJson = embedJson(serializeNode(root));
+    const stateJson = embedJson(state);
+    const propsJson = embedJson(propertiesMap);
     const nonce = getNonce();
+    const providerScript = this.renderProvider.buildClientScript();
+    const providerCss = this.renderProvider.buildCss();
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -133,7 +145,8 @@ class FormLayoutView {
   <title>Form Layout</title>
   <style nonce="${nonce}">
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
-    ${INLINE_CSS}
+    ${CHROME_CSS}
+    ${providerCss}
   </style>
 </head>
 <body>
@@ -159,7 +172,7 @@ class FormLayoutView {
       if (!node) return null;
       parent = parent || null;
       node.parent = parent;
-      node.id = node.name || ((parent && parent.id) ? parent.id + '::' + node.className : node.className);
+      // node.id comes from the host (path-based, unique) - never recompute it here.
       node.descendants = [];
       node.children = (node.children || []).map(function(c) { return rehydrate(c, node); });
       function collect(n, list) {
@@ -187,66 +200,7 @@ class FormLayoutView {
     let selectedId = initialState.selectedId || null;
     let highlightedIds = new Set(initialState.highlightedIds || []);
 
-    function renderLayout() {
-      host.innerHTML = '';
-      host.className = 'c4d-formlayout-host';
-      if (!root) {
-        host.innerHTML = '<div class="c4d-empty">No form structure found in this file.</div>';
-        return;
-      }
-      const viewport = document.createElement('div');
-      viewport.className = 'c4d-viewport';
-      host.appendChild(viewport);
-      const stage = document.createElement('div');
-      stage.className = 'c4d-stage';
-      const rw = Math.max((root.bounds && root.bounds.width) || 400, 200);
-      const rh = Math.max((root.bounds && root.bounds.height) || 300, 150);
-      stage.style.width = rw + 'px';
-      stage.style.height = rh + 'px';
-      viewport.appendChild(stage);
-      buildNode(root, stage, true);
-    }
-
-    function buildNode(node, parentEl, isRoot) {
-      const el = document.createElement('div');
-      el.className = 'c4d-box';
-      el.dataset.nodeId = node.id;
-      if (node.id === selectedId) el.classList.add('c4d-selected');
-      else if (highlightedIds.has(node.id)) el.classList.add('c4d-highlight-child');
-
-      const b = node.bounds || { left: 0, top: 0, width: 0, height: 0 };
-      if (isRoot) {
-        el.style.left = '0'; el.style.top = '0';
-        el.style.width = '100%'; el.style.height = '100%';
-        el.classList.add('c4d-root');
-      } else {
-        el.style.left = (b.left || 0) + 'px';
-        el.style.top = (b.top || 0) + 'px';
-        el.style.width = Math.max(b.width || 20, 8) + 'px';
-        el.style.height = Math.max(b.height || 16, 8) + 'px';
-      }
-
-      const label = document.createElement('div');
-      label.className = 'c4d-label';
-      const alignSuffix = (node.align && node.align !== 'None') ? (' [' + node.align + ']') : '';
-      label.textContent = (node.name || ('(' + node.className + ')')) + alignSuffix;
-      label.title = (node.name || '') + ' : ' + node.className + alignSuffix;
-      el.appendChild(label);
-
-      el.addEventListener('click', function(ev) {
-        ev.stopPropagation();
-        select(node.id);
-      });
-      el.addEventListener('dblclick', function(ev) {
-        ev.stopPropagation();
-        vscode.postMessage({ type: 'goto', nodeId: node.id });
-      });
-
-      parentEl.appendChild(el);
-      for (var i = 0; i < (node.children || []).length; i++) {
-        buildNode(node.children[i], el, false);
-      }
-    }
+${providerScript}
 
     function renderInspector(id) {
       inspectorBody.innerHTML = '';
@@ -300,11 +254,7 @@ class FormLayoutView {
           }
         }
       }
-      host.querySelectorAll('.c4d-box').forEach(function(el) {
-        const nid = el.dataset.nodeId;
-        el.classList.toggle('c4d-selected', nid === selectedId);
-        el.classList.toggle('c4d-highlight-child', nid !== selectedId && highlightedIds.has(nid));
-      });
+      applySelection();
       renderInspector(id);
       vscode.postMessage({ type: 'select', nodeId: id });
     }
@@ -312,9 +262,7 @@ class FormLayoutView {
     host.addEventListener('click', function() {
       selectedId = null;
       highlightedIds = new Set();
-      host.querySelectorAll('.c4d-box').forEach(function(el) {
-        el.classList.remove('c4d-selected', 'c4d-highlight-child');
-      });
+      applySelection();
       renderInspector(null);
       vscode.postMessage({ type: 'select', nodeId: null });
     });
@@ -356,6 +304,52 @@ class FormLayoutView {
   }
 }
 
+/**
+ * Plain, cycle-free snapshot of the node tree for the webview.
+ * Drops `parent` (circular) and materializes the `id` getter.
+ *
+ * @param {import('./model').FormNode|null} node
+ * @returns {object|null}
+ */
+function serializeNode(node) {
+  if (!node) return null;
+  return {
+    id: node.id,
+    name: node.name,
+    className: node.className,
+    kind: node.kind,
+    align: node.align,
+    bounds: node.bounds,
+    storedBounds: node.storedBounds,
+    startLine: node.startLine,
+    endLine: node.endLine,
+    children: (node.children || []).map(serializeNode),
+  };
+}
+
+/**
+ * JSON for embedding inside an inline <script> block.
+ *
+ * DFM property values are arbitrary user text, so a Caption like
+ * `'</script><script>…'` would otherwise close the script element early and
+ * execute as markup — the CSP nonce does not help, because the injected code
+ * would sit inside the same already-nonced block. Escaping `<` defeats that,
+ * and U+2028/U+2029 are escaped because they are literal line terminators in
+ * JavaScript string literals but legal inside JSON strings.
+ *
+ * @param {any} value
+ * @param {(key: string, value: any) => any} [replacer]
+ * @returns {string}
+ */
+function embedJson(value, replacer) {
+  return JSON.stringify(value, replacer)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+    .replace(/`/g, '\\u0060')
+    .replace(/\$/g, '\\u0024');
+}
+
 function getNonce() {
   let text = '';
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -365,7 +359,12 @@ function getNonce() {
   return text;
 }
 
-const INLINE_CSS = `
+/**
+ * Chrome shared by every render provider: the two-pane shell and the
+ * property inspector. The drawing surface itself is styled by the
+ * provider's own CSS (see DomRenderProvider#buildCss).
+ */
+const CHROME_CSS = `
   #app {
     display: flex;
     width: 100%;
@@ -458,46 +457,6 @@ const INLINE_CSS = `
     word-break: break-word;
     font-family: var(--vscode-editor-font-family, monospace);
     font-size: 11px;
-  }
-  .c4d-formlayout-host {
-    position: relative; width: 100%; height: 100%; overflow: auto;
-    background: var(--vscode-editor-background, #1e1e1e);
-  }
-  .c4d-empty { padding: 24px; opacity: 0.7; }
-  .c4d-viewport { padding: 16px; min-width: 100%; min-height: 100%; box-sizing: border-box; }
-  .c4d-stage {
-    position: relative; background: var(--vscode-sideBar-background, #252526);
-    border: 1px solid var(--vscode-panel-border, #3c3c3c);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  }
-  .c4d-box {
-    position: absolute; box-sizing: border-box;
-    border: 1px solid var(--vscode-input-border, #3c3c3c);
-    background: rgba(128,128,128,0.08); overflow: hidden; cursor: pointer;
-    transition: border-color 0.1s, background 0.1s, box-shadow 0.1s;
-  }
-  .c4d-box:hover {
-    border-color: var(--vscode-focusBorder, #007acc);
-    background: rgba(0,122,204,0.12);
-  }
-  .c4d-root { background: transparent; border-style: dashed; }
-  .c4d-selected {
-    border: 2px solid var(--vscode-focusBorder, #007acc) !important;
-    background: rgba(0,122,204,0.18) !important;
-    box-shadow: 0 0 0 1px var(--vscode-focusBorder, #007acc); z-index: 10;
-  }
-  .c4d-highlight-child {
-    border: 1px dashed var(--vscode-charts-orange, #ce9178) !important;
-    background: rgba(206,145,120,0.15) !important;
-  }
-  .c4d-label {
-    position: absolute; top: 1px; left: 3px; right: 3px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-size: 10px; line-height: 1.2; pointer-events: none;
-    color: var(--vscode-descriptionForeground, #9d9d9d);
-  }
-  .c4d-selected > .c4d-label, .c4d-highlight-child > .c4d-label {
-    color: var(--vscode-editor-foreground, #cccccc); font-weight: 600;
   }
 `;
 

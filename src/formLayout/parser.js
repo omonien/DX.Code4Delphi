@@ -262,6 +262,15 @@ const BINARY_PROP_NAMES = [
   'bitmap.data', 'items.data', 'imagelist',
 ];
 
+/**
+ * Carriers of binary payloads anywhere in the property path, so that
+ * `Some.Picture.Data` is rejected as well as a bare `Picture`.
+ */
+const BINARY_PROP_CARRIERS = [
+  'picture', 'glyph', 'bitmap', 'image', 'icon',
+  'pngimage', 'jpegimage', 'metafile',
+];
+
 function isBinaryPropertyName(propName) {
   if (!propName) return false;
   const p = String(propName).toLowerCase();
@@ -270,13 +279,8 @@ function isBinaryPropertyName(propName) {
   const parts = p.split('.');
   const last = parts[parts.length - 1];
   if (BINARY_PROP_NAMES.includes(last)) return true;
-  if (parts.some((seg) => BINARY_PROP_NAMES.includes(seg) && seg !== 'data')) {
-    // e.g. Picture.Data → picture is binary-ish
-    return parts.some((seg) =>
-      ['picture', 'glyph', 'bitmap', 'image', 'icon', 'pngimage', 'jpegimage', 'metafile'].includes(seg)
-    );
-  }
-  return false;
+  // a binary carrier anywhere in the path (e.g. Buttons.Glyph.Something)
+  return parts.some((seg) => BINARY_PROP_CARRIERS.includes(seg));
 }
 
 /**
