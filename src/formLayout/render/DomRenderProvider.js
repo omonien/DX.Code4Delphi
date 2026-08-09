@@ -45,17 +45,7 @@ const CLIENT_SCRIPT = `
 
       var titleBar = document.createElement('div');
       titleBar.id = 'form-title-bar';
-      titleBar.textContent = root ? (function() {
-        var parts = [];
-        if (showName && root.name) parts.push(root.name);
-        if (showClass) parts.push(root.className);
-        if (showCaption) {
-          var cap = nodeCaption(root);
-          if (cap) parts.push(cap);
-        }
-        if (showAlign && root.align && root.align !== 'None') parts.push('[' + root.align + ']');
-        return parts.join(' \u00b7 ') || root.name || root.className;
-      })() : '';
+      titleBar.textContent = root ? getLabelText(root, true) : '';
       titleBar.addEventListener('click', function() {
         if (root) select(root.id);
       });
@@ -95,7 +85,7 @@ const CLIENT_SCRIPT = `
       if (!isRoot) {
         var label = document.createElement('div');
         label.className = 'c4d-label';
-        label.textContent = getLabelText(node);
+        label.textContent = getLabelText(node, false);
         el.appendChild(label);
       }
 

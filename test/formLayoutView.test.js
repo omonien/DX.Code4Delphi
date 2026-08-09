@@ -37,9 +37,19 @@ function createPanel() {
 
 let lastPanel = null;
 
+class WorkspaceEdit {
+  constructor() {
+    this.replacements = [];
+  }
+  replace(uri, range, text) {
+    this.replacements.push({ uri, range, text });
+  }
+}
+
 const vscodeMock = {
   Position,
   Range,
+  WorkspaceEdit,
   ViewColumn: { One: 1, Beside: 2 },
   window: {
     createWebviewPanel() {
@@ -54,6 +64,21 @@ const vscodeMock = {
   workspace: {
     onDidChangeTextDocument() {
       return { dispose() {} };
+    },
+    applyEdit(edit) {
+      // Apply text replacements to the mock document bound on the edit uri
+      for (const rep of edit.replacements || []) {
+        const doc = documentsByUri.get(rep.uri.toString());
+        if (!doc) continue;
+        const lines = doc.getText().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+        const line = rep.range.start.line;
+        const startCol = rep.range.start.character;
+        const endCol = rep.range.end.character;
+        const row = lines[line] || '';
+        lines[line] = row.slice(0, startCol) + rep.text + row.slice(endCol);
+        doc._text = lines.join('\n');
+      }
+      return Promise.resolve(true);
     },
     getConfiguration() {
       return {
@@ -70,6 +95,8 @@ const vscodeMock = {
   },
 };
 
+const documentsByUri = new Map();
+
 const originalLoad = Module._load;
 Module._load = function (request, parent, isMain) {
   if (request === 'vscode') return vscodeMock;
@@ -79,17 +106,30 @@ Module._load = function (request, parent, isMain) {
 const { FormLayoutView } = require('../src/formLayout/FormLayoutView.js');
 
 function makeDocument(text, fileName = '/tmp/Test.dfm') {
-  return {
+  const uriStr = 'file://' + fileName;
+  const doc = {
     fileName,
-    uri: { toString: () => 'file://' + fileName, fsPath: fileName },
-    getText: () => text,
+    uri: { toString: () => uriStr, fsPath: fileName },
+    _text: text,
+    getText() {
+      return this._text;
+    },
   };
+  documentsByUri.set(uriStr, doc);
+  return doc;
 }
 
 function openView(text, fileName) {
   const context = { subscriptions: [] };
   const view = new FormLayoutView(context, makeDocument(text, fileName));
   return view;
+}
+
+function extractInitialState(html) {
+  const marker = 'const initialState = ';
+  const start = html.indexOf(marker) + marker.length;
+  const end = html.indexOf(';', start);
+  return JSON.parse(html.slice(start, end));
 }
 
 describe('FormLayoutView webview HTML', () => {
@@ -295,5 +335,74 @@ end
     assert.ok(searches.some(function(s) { return s.indexOf('panel') !== -1; }));
     var ones = searches.filter(function(s) { return s.indexOf('1') !== -1; });
     assert.equal(ones.length, 3);
+  });
+
+  test('selection is preserved after setProp refresh', async () => {
+    const dfm = `
+object Form1: TForm1
+  ClientWidth = 200
+  ClientHeight = 100
+  object Label1: TLabel
+    Left = 8
+    Top = 8
+    Caption = 'Hello'
+  end
+end
+`;
+    const view = openView(dfm);
+    const label = view.root.findById('Form1::Label1');
+    assert.ok(label);
+
+    // Simulate user selection in the webview
+    view.panel.webview._handler({ type: 'select', nodeId: label.id });
+    assert.equal(view.selectedId, 'Form1::Label1');
+
+    // Simulate property edit
+    await new Promise((resolve) => {
+      const orig = view._refreshFromDocument.bind(view);
+      view._refreshFromDocument = function () {
+        orig();
+        resolve();
+      };
+      view.panel.webview._handler({
+        type: 'setProp',
+        nodeId: label.id,
+        propName: 'Caption',
+        value: 'World',
+      });
+    });
+
+    assert.equal(view.selectedId, 'Form1::Label1', 'host keeps selectedId after edit');
+    const state = extractInitialState(view.panel.webview.html);
+    assert.equal(state.selectedId, 'Form1::Label1', 'webview state carries selectedId');
+    assert.ok(
+      view.document.getText().includes("'World'") || view.document.getText().includes('World'),
+      'document was updated'
+    );
+  });
+
+  test('setProp encodes newlines as #13#10 in string properties', async () => {
+    const view = openView(`
+object Form1: TForm1
+  Caption = 'Hi'
+end
+`);
+    view.panel.webview._handler({ type: 'select', nodeId: 'Form1' });
+    await new Promise((resolve) => {
+      const orig = view._refreshFromDocument.bind(view);
+      view._refreshFromDocument = function () {
+        orig();
+        resolve();
+      };
+      view.panel.webview._handler({
+        type: 'setProp',
+        nodeId: 'Form1',
+        propName: 'Caption',
+        value: 'Line1\nLine2',
+      });
+    });
+    const text = view.document.getText();
+    assert.match(text, /Caption\s*=\s*'Line1'#13#10'Line2'/);
+    assert.ok(!text.includes('Caption = Line1\n'), 'raw newline must not break the DFM line');
   });
 });

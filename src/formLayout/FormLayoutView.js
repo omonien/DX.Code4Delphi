@@ -6,6 +6,7 @@ const { parseDfm, getTextProperties } = require('./parser.js');
 const { applyAlignLayout } = require('./layoutEngine.js');
 const { DomRenderProvider } = require('./render/DomRenderProvider.js');
 const { getConfig } = require('../configuration.js');
+const { buildSearchText, computeTreeFilterHidden } = require('./treeFilter.js');
 
 /** Available render providers, keyed by their id. */
 const RENDER_PROVIDERS = {
@@ -54,10 +55,12 @@ class FormLayoutView {
     this.panel.onDidDispose(() => this.dispose(), null, context.subscriptions);
 
     this._suppressRefresh = false;
+    /** @type {ReturnType<typeof setTimeout>|null} */
+    this._refreshTimer = null;
 
     this._changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() === this.document.uri.toString() && !this._suppressRefresh) {
-        this._refreshFromDocument();
+        this._scheduleRefresh();
       }
     });
 
@@ -75,7 +78,17 @@ class FormLayoutView {
     return name;
   }
 
+  _scheduleRefresh() {
+    if (this._suppressRefresh) return;
+    if (this._refreshTimer) clearTimeout(this._refreshTimer);
+    this._refreshTimer = setTimeout(() => {
+      this._refreshTimer = null;
+      if (!this._suppressRefresh) this._refreshFromDocument();
+    }, 200);
+  }
+
   _refreshFromDocument() {
+    const prevId = this.selectedId;
     try {
       this.root = parseDfm(this.document.getText());
       if (this.root) {
@@ -87,7 +100,8 @@ class FormLayoutView {
       this.root = null;
       console.error('[Code4Delphi] DFM parse / layout error', err);
     }
-    this.selectedId = null;
+    this.selectedId =
+      this.root && prevId && this.root.findById(prevId) ? prevId : null;
     this._updateHtml();
   }
 
@@ -260,12 +274,14 @@ class FormLayoutView {
     });
 
     document.addEventListener('keydown', function(ev) {
-      if (ev.key === 'Escape' && selectedId && root) {
-        ev.preventDefault();
-        var node = root.findById(selectedId);
-        if (node && node.parent) {
-          select(node.parent.id);
-        }
+      if (ev.key !== 'Escape' || !selectedId || !root) return;
+      var t = ev.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (document.querySelector('.c4d-overlay')) return;
+      ev.preventDefault();
+      var node = root.findById(selectedId);
+      if (node && node.parent) {
+        select(node.parent.id);
       }
     });
 
@@ -280,7 +296,7 @@ class FormLayoutView {
     document.getElementById('opt-caption').checked = showCaption;
     document.getElementById('opt-align').checked = showAlign;
 
-    function getLabelText(node) {
+    function getLabelText(node, fallback) {
       var parts = [];
       if (showName && node.name) parts.push(node.name);
       if (showClass) parts.push(node.className);
@@ -289,7 +305,10 @@ class FormLayoutView {
         if (cap) parts.push(cap);
       }
       if (showAlign && node.align && node.align !== 'None') parts.push('[' + node.align + ']');
-      return parts.join(' \u00b7 ');
+      var joined = parts.join(' \u00b7 ');
+      if (joined) return joined;
+      if (fallback) return node.name || node.className || '';
+      return '';
     }
 
     function nodeCaption(node) {
@@ -311,8 +330,10 @@ class FormLayoutView {
         var node = root.findById(nid);
         if (!node) return;
         var label = box.querySelector('.c4d-label');
-        if (label) label.textContent = getLabelText(node);
+        if (label) label.textContent = getLabelText(node, false);
       });
+      var tb = document.getElementById('form-title-bar');
+      if (tb && root) tb.textContent = getLabelText(root, true);
     }
 
     function onLabelOptChange() {
@@ -321,18 +342,6 @@ class FormLayoutView {
       showCaption = document.getElementById('opt-caption').checked;
       showAlign = document.getElementById('opt-align').checked;
       refreshLabels();
-      var tb = document.getElementById('form-title-bar');
-      if (tb && root) {
-        var parts = [];
-        if (showName && root.name) parts.push(root.name);
-        if (showClass) parts.push(root.className);
-        if (showCaption) {
-          var cap = nodeCaption(root);
-          if (cap) parts.push(cap);
-        }
-        if (showAlign && root.align && root.align !== 'None') parts.push('[' + root.align + ']');
-        tb.textContent = parts.join(' \u00b7 ') || root.name || root.className;
-      }
       vscode.postMessage({ type: 'labelOpts', showName: showName, showClassName: showClass, showCaption: showCaption, showAlign: showAlign });
     }
 
@@ -389,7 +398,15 @@ ${providerScript}
 
     function startEditProp(td, propName, nodeId) {
       if (td.querySelector('input')) return;
+      // Prefer propertiesMap (keeps real newlines); td/input collapse them
       var oldValue = td.textContent;
+      var plist = propertiesMap[nodeId] || [];
+      for (var pi = 0; pi < plist.length; pi++) {
+        if (plist[pi].name === propName) {
+          oldValue = String(plist[pi].value);
+          break;
+        }
+      }
       td.textContent = '';
 
       var wrapper = document.createElement('div');
@@ -397,7 +414,9 @@ ${providerScript}
       var input = document.createElement('input');
       input.type = 'text';
       input.className = 'c4d-prop-edit';
-      input.value = oldValue;
+      // Single-line preview only — newlines are not representable in <input>
+      // Double-escape: this source lives inside a template literal
+      input.value = String(oldValue).replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n').replace(/\\n/g, ' ');
       wrapper.appendChild(input);
 
       var expandBtn = document.createElement('button');
@@ -411,40 +430,79 @@ ${providerScript}
       input.select();
 
       var editing = true;
+      var suppressBlurCommit = false;
+      // Working copy for the extended editor (may contain real newlines)
+      var extendedSeed = oldValue;
 
+      // mousedown on … blurs the input before click — prevent that so the
+      // editor (and this button) are not destroyed before the click handler runs.
+      expandBtn.addEventListener('mousedown', function(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        suppressBlurCommit = true;
+      });
       expandBtn.addEventListener('click', function(ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        editing = false;
-        openExtendedEditor(function(newValue) {
-          input.value = newValue;
-          editing = true;
-          input.focus();
-        }, input.value, propName);
+        suppressBlurCommit = true;
+        editing = true;
+        // If user typed in the single-line field, prefer that unless it only
+        // differs by newline flattening of extendedSeed
+        var seed = input.value;
+        var flatSeed = String(extendedSeed).replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n').replace(/\\n/g, ' ');
+        if (seed === flatSeed) seed = extendedSeed;
+        openExtendedEditor(function(newValue, accepted) {
+          if (accepted) {
+            // Commit directly — never assign multi-line text to <input>.value
+            extendedSeed = newValue;
+            commitValue(newValue);
+          } else {
+            suppressBlurCommit = false;
+            input.focus();
+          }
+        }, seed, propName);
       });
 
-      function commit() {
-        if (!editing) return;
+      function commitValue(newValue) {
+        if (!editing && !suppressBlurCommit) return;
         editing = false;
-        var newValue = input.value;
-        td.textContent = newValue;
-        td.title = newValue + ' (click to edit)';
+        suppressBlurCommit = false;
+        // Single-line cell shows a flattened preview; real newlines go to the host
+        var preview = String(newValue).replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n').replace(/\\n/g, ' ');
+        td.textContent = preview;
+        td.title = preview + ' (click to edit)';
         if (newValue !== oldValue) {
           vscode.postMessage({ type: 'setProp', nodeId: nodeId, propName: propName, value: newValue });
         }
       }
 
+      function commit() {
+        if (!editing || suppressBlurCommit) return;
+        commitValue(input.value);
+      }
+
       function cancel() {
         if (!editing) return;
         editing = false;
+        suppressBlurCommit = false;
         td.textContent = oldValue;
         td.title = oldValue + ' (click to edit)';
       }
 
-      input.addEventListener('blur', commit);
+      input.addEventListener('blur', function() {
+        // Defer so mousedown on … can set suppressBlurCommit first
+        setTimeout(function() {
+          if (suppressBlurCommit) return;
+          commit();
+        }, 0);
+      });
       input.addEventListener('keydown', function(ev) {
-        if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
-        else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+        if (ev.key === 'Enter') { ev.preventDefault(); suppressBlurCommit = false; commit(); }
+        else if (ev.key === 'Escape') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          cancel();
+        }
       });
     }
 
@@ -477,14 +535,18 @@ ${providerScript}
       function close(accept) {
         var val = textarea.value;
         document.body.removeChild(overlay);
-        if (accept) callback(val);
+        callback(val, !!accept);
       }
 
       okBtn.addEventListener('click', function() { close(true); });
       cancelBtn.addEventListener('click', function() { close(false); });
-      overlay.addEventListener('click', function(ev) { if (ev.target === overlay) close(true); });
+      overlay.addEventListener('click', function(ev) { if (ev.target === overlay) close(false); });
       textarea.addEventListener('keydown', function(ev) {
-        if (ev.key === 'Escape') { close(false); }
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          close(false);
+        }
       });
       textarea.focus();
     }
@@ -501,6 +563,7 @@ ${providerScript}
     function buildTreeNode(node, parentUl) {
       var li = document.createElement('li');
       li.dataset.treeId = node.id;
+      // Keep in sync with treeFilter.buildSearchText
       li.setAttribute('data-search', ((node.name || '') + ' ' + (node.className || '')).toLowerCase());
       li.className = 'c4d-tree-item';
 
@@ -613,21 +676,63 @@ ${providerScript}
     buildTree();
     renderLayout();
     applyZoom();
-    if (selectedId) {
-      renderInspector(selectedId);
-      applySelection();
-      applyTreeSelection();
+    // Rebuild selection/highlights from id (do not trust stale highlightedIds alone)
+    if (selectedId && root && root.findById(selectedId)) {
+      select(selectedId);
     }
 
     var treeFilter = document.getElementById('tree-filter');
     treeFilter.addEventListener('input', function() {
-      var q = (treeFilter.value || '').toLowerCase();
-      var rows = treeBody.querySelectorAll('.c4d-tree-item');
-      rows.forEach(function(item) {
-        var haystack = item.getAttribute('data-search') || '';
-        item.classList.toggle('c4d-tree-item-hidden', q !== '' && haystack.indexOf(q) === -1);
-      });
+      applyTreeFilter(treeFilter.value || '');
     });
+
+    /**
+     * Filter tree items by substring match on data-search + visible label.
+     * Matching nodes stay visible; ancestors of matches stay visible too.
+     * Algorithm mirrors src/formLayout/treeFilter.js (computeTreeFilterHidden).
+     */
+    function applyTreeFilter(query) {
+      var q = (query || '').toLowerCase();
+      var items = Array.prototype.slice.call(treeBody.querySelectorAll('.c4d-tree-item'));
+      var n = items.length;
+      if (!q) {
+        for (var c = 0; c < n; c++) items[c].classList.remove('c4d-tree-item-hidden');
+        return;
+      }
+
+      var show = new Array(n);
+      var parents = new Array(n);
+      for (var i = 0; i < n; i++) {
+        var item = items[i];
+        var rowEl = item.firstElementChild;
+        var labelEl = rowEl ? rowEl.querySelector('.c4d-tree-label') : null;
+        var labelText = labelEl ? String(labelEl.textContent || '').toLowerCase() : '';
+        var hay = (item.getAttribute('data-search') || '') + ' ' + labelText;
+        show[i] = hay.indexOf(q) !== -1;
+
+        // parent li is ul.c4d-tree-list's parent
+        var parentItem = null;
+        var ul = item.parentElement;
+        if (ul && ul.classList.contains('c4d-tree-list')) {
+          var maybe = ul.parentElement;
+          if (maybe && maybe.classList.contains('c4d-tree-item')) parentItem = maybe;
+        }
+        parents[i] = parentItem ? items.indexOf(parentItem) : -1;
+      }
+
+      for (var j = 0; j < n; j++) {
+        if (!show[j]) continue;
+        var p = parents[j];
+        while (p >= 0) {
+          show[p] = true;
+          p = parents[p];
+        }
+      }
+
+      for (var k = 0; k < n; k++) {
+        items[k].classList.toggle('c4d-tree-item-hidden', !show[k]);
+      }
+    }
 
     document.addEventListener('keydown', function(ev) {
       if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
@@ -653,7 +758,14 @@ ${providerScript}
       }
     });
     } catch (e) {
-      document.getElementById('host').innerHTML = '<div style="padding:24px;color:#f14c4c;font-family:monospace;white-space:pre-wrap;">Script error: ' + (e && e.message ? e.message : String(e)) + '</div>';
+      var hostEl = document.getElementById('host');
+      if (hostEl) {
+        hostEl.textContent = '';
+        var errDiv = document.createElement('div');
+        errDiv.style.cssText = 'padding:24px;color:#f14c4c;font-family:monospace;white-space:pre-wrap;';
+        errDiv.textContent = 'Script error: ' + (e && e.message ? e.message : String(e));
+        hostEl.appendChild(errDiv);
+      }
     }
   </script>
 </body>
@@ -700,30 +812,43 @@ ${providerScript}
    */
   _setProperty(nodeId, propName, newValue) {
     if (!this.root || !nodeId) return;
+    if (typeof propName !== 'string' || typeof newValue !== 'string') return;
+    if (!propName || /[\r\n]/.test(propName)) return;
+
+    // Editing implies the node is selected — keep it across the full HTML rebuild
+    this.selectedId = nodeId;
+
     const node = this.root.findById(nodeId);
     if (!node) return;
+
+    // Only allow edits for properties already exposed as text props on this node
+    const allowed = getTextProperties(node).some(
+      (p) => p.name.toLowerCase() === propName.toLowerCase()
+    );
+    if (!allowed && !(node.properties && Object.prototype.hasOwnProperty.call(node.properties, propName))) {
+      return;
+    }
 
     const text = this.document.getText();
     const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const start = node.startLine || 0;
     const end = node.endLine || lines.length;
 
-    // Find the property line within the node's range
-    const propKey = propName.toLowerCase();
     const propRe = new RegExp('^(\\s*' + escapeRegex(propName) + '\\s*=\\s*)(.+)$', 'i');
     for (let i = start; i <= end && i < lines.length; i++) {
       const m = lines[i].match(propRe);
       if (m) {
         const prefix = m[1];
-        const oldVal = m[2].trim();
+        let oldVal = m[2].trim();
+        const commentIdx = oldVal.indexOf('//');
+        if (commentIdx >= 0) oldVal = oldVal.slice(0, commentIdx).trim();
 
-        // Preserve quoting: if the old value was a Pascal string literal,
-        // encode the new value using Delphi #xyz syntax for non-ASCII chars
-        let quotedValue = newValue;
-        if ((oldVal.startsWith("'") && oldVal.endsWith("'")) ||
-            (oldVal.startsWith('"') && oldVal.endsWith('"'))) {
-          quotedValue = encodeDfmString(newValue);
-        }
+        const asString = isDfmStringValue(oldVal) || looksLikeStringProp(propName);
+        // Newlines in non-string props would break the DFM line structure
+        if (!asString && /[\r\n]/.test(newValue)) return;
+
+        // Strings: encode newlines as #13#10 on one physical DFM line (not raw \n)
+        let quotedValue = asString ? encodeDfmString(newValue) : newValue;
 
         const edit = new vscode.WorkspaceEdit();
         const uri = this.document.uri;
@@ -732,10 +857,19 @@ ${providerScript}
           new vscode.Position(i, lines[i].length)
         );
         edit.replace(uri, range, quotedValue);
+        if (this._refreshTimer) {
+          clearTimeout(this._refreshTimer);
+          this._refreshTimer = null;
+        }
         this._suppressRefresh = true;
         vscode.workspace.applyEdit(edit).then((applied) => {
+          try {
+            if (applied) this._refreshFromDocument();
+          } finally {
+            this._suppressRefresh = false;
+          }
+        }, () => {
           this._suppressRefresh = false;
-          if (applied) this._refreshFromDocument();
         });
         return;
       }
@@ -743,6 +877,10 @@ ${providerScript}
   }
 
   dispose() {
+    if (this._refreshTimer) {
+      clearTimeout(this._refreshTimer);
+      this._refreshTimer = null;
+    }
     if (this._changeSub) {
       this._changeSub.dispose();
       this._changeSub = null;
@@ -811,15 +949,22 @@ function escapeRegex(s) {
 }
 
 /**
- * Encode a plain string for a DFM property value.
- * Printable ASCII stays in single quotes; characters outside that range
- * are encoded as Delphi #xyz decimal character codes.
+ * Encode a plain string for a DFM/FMX property value on a single source line.
+ *
+ * Line breaks are written as Delphi character codes (not raw newlines):
+ *   \\n or \\r\\n  →  #13#10   (Windows sLineBreak, the usual DFM form)
+ *   lone \\r       →  #13
+ *
+ * Printable ASCII stays inside single-quoted chunks; other code points become #n.
+ * Adjacent chunks concatenate: 'Line1'#13#10'Line2'
  *
  * @param {string} s
  * @returns {string}
  */
 function encodeDfmString(s) {
   if (typeof s !== 'string') return String(s);
+  // Normalize to LF first, then expand each LF to CRLF for DFM #13#10
+  s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
   var parts = [];
   var literal = '';
   for (var i = 0; i < s.length; i++) {
@@ -833,6 +978,40 @@ function encodeDfmString(s) {
   }
   if (literal) { parts.push("'" + literal + "'"); }
   return parts.join('') || "''";
+}
+
+/**
+ * True if a DFM RHS looks like a Pascal string (quoted chunks and/or #n codes).
+ * @param {string} oldVal
+ * @returns {boolean}
+ */
+function isDfmStringValue(oldVal) {
+  if (!oldVal) return false;
+  const s = String(oldVal).trim();
+  if (!s) return false;
+  if ((s.startsWith("'") && s.endsWith("'")) || (s.startsWith('"') && s.endsWith('"'))) return true;
+  if (s.includes("'") || s.includes('"')) return true;
+  if (/#\d+/.test(s)) return true;
+  return false;
+}
+
+/**
+ * Known string-ish property names that should always be written via encodeDfmString.
+ * @param {string} propName
+ * @returns {boolean}
+ */
+function looksLikeStringProp(propName) {
+  const p = String(propName || '').toLowerCase();
+  return (
+    p === 'caption' ||
+    p === 'text' ||
+    p === 'hint' ||
+    p === 'title' ||
+    p.endsWith('.caption') ||
+    p.endsWith('.text') ||
+    p.endsWith('.hint') ||
+    p.endsWith('.title')
+  );
 }
 
 /**
@@ -1255,4 +1434,11 @@ const CHROME_CSS = `
   }
 `;
 
-module.exports = { FormLayoutView, encodeDfmString };
+module.exports = {
+  FormLayoutView,
+  encodeDfmString,
+  isDfmStringValue,
+  looksLikeStringProp,
+  buildSearchText,
+  computeTreeFilterHidden,
+};

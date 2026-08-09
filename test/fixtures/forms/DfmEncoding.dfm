@@ -23,7 +23,7 @@ object Form1: TForm1
     Top = 40
     Width = 200
     Height = 13
-    Caption = 'au'#223'erhalbs'
+    Caption = 'au'#223'erhalb'
   end
   object Button1: TButton
     Left = 8

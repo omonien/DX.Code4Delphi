@@ -26,6 +26,7 @@ const {
   getTextProperties,
   isBinaryPropertyName,
   isTextPropertyValue,
+  decodeDfmString,
 } = require('../src/formLayout/parser.js');
 const { FormNode } = require('../src/formLayout/model.js');
 const {
@@ -562,21 +563,33 @@ describe('DFM #xyz character encoding', () => {
     assert.equal(encodeDfmString('au\u00dferhalb'), "'au'#223'erhalb'");
   });
 
-  test('encodeDfmString – control chars become #xyz', () => {
-    assert.equal(encodeDfmString('ab\rc\nd'), "'ab'#13'c'#10'd'");
+  test('encodeDfmString – newlines become #13#10 (DFM convention)', () => {
+    // Lone LF (as from a textarea) → CRLF codes
+    assert.equal(encodeDfmString('Line1\nLine2'), "'Line1'#13#10'Line2'");
+    // Already CRLF → same
+    assert.equal(encodeDfmString('Line1\r\nLine2'), "'Line1'#13#10'Line2'");
+    // Lone CR → #13 only (no trailing LF invented mid-stream beyond normalize)
+    assert.equal(encodeDfmString('a\rb'), "'a'#13#10'b'");
   });
 
-  test('encodeDfmString round-trip: encode then simulate decode', () => {
-    const roundtrip = (s) => {
-      var encoded = encodeDfmString(s);
-      var decoded = encoded.replace(/#(\d{1,5})/g, function(_, code) {
-        return String.fromCodePoint(parseInt(code, 10));
-      }).replace(/'/g, '');
-      return decoded;
-    };
+  test('encodeDfmString round-trip via decodeDfmString', () => {
+    const roundtrip = (s) => decodeDfmString(encodeDfmString(s));
     assert.equal(roundtrip('J\u00e4nner'), 'J\u00e4nner');
     assert.equal(roundtrip('Hello'), 'Hello');
     assert.equal(roundtrip('l\u00f6schen'), 'l\u00f6schen');
-    assert.equal(roundtrip('ab\rc\nd'), 'ab\rc\nd');
+    // LF input round-trips as CRLF (DFM Windows convention)
+    assert.equal(roundtrip('Line1\nLine2'), 'Line1\r\nLine2');
+    assert.equal(roundtrip('Line1\r\nLine2'), 'Line1\r\nLine2');
+  });
+
+  test('isDfmStringValue detects quoted, #n, and concatenated forms', () => {
+    const { isDfmStringValue, looksLikeStringProp } = require('../src/formLayout/FormLayoutView.js');
+    assert.equal(isDfmStringValue("'Hello'"), true);
+    assert.equal(isDfmStringValue("'Hi'#13#10"), true);
+    assert.equal(isDfmStringValue('#228'), true);
+    assert.equal(isDfmStringValue('120'), false);
+    assert.equal(isDfmStringValue('alTop'), false);
+    assert.equal(looksLikeStringProp('Caption'), true);
+    assert.equal(looksLikeStringProp('Width'), false);
   });
 });
