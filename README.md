@@ -81,14 +81,38 @@ into Visual Studio Code:
 
 ### 6. Form layout visualizer (DFM / FMX)
 
-Open any `.dfm` or `.fmx` file (or a `.pas` that has a sibling form) and run **Code4Delphi: Show Form Layout**.
+Open any `.dfm` or `.fmx` file (or a `.pas` that has a sibling form) and run
+**Code4Delphi: Show Form Layout** (Command Palette, or the editor context menu
+on Delphi / form files).
 
-A side-by-side webview draws the form as a **box model**:
+A three-pane webview shows the form as a **box model**:
 
-* Every control becomes a rectangle using its stored `Left` / `Top` / `Width` / `Height` (or FMX `Position` / `Size`).
-* Nested hierarchy is preserved; children are drawn inside their parent.
-* Click a box → it is highlighted; all of its descendants are highlighted in a different style so you can see the ownership tree at a glance.
-* Double-click jumps back to the corresponding `object` line in the text editor.
+| Pane | Role |
+| --- | --- |
+| **Controls** (left) | Hierarchy tree with live filter; click to select, double-click to jump to source. Collapsible. |
+| **Layout** (center) | Title bar + nested rectangles + zoom bar (`−` / editable % / `+`) and label toggles. |
+| **Properties** (right) | Text properties of the selection (editable). Collapsible. |
+
+**Interaction**
+
+* Click a box or tree node → select it; descendants are highlighted so ownership is obvious.
+* Double-click a box or tree node → jump to the corresponding `object` line in the editor.
+* **Escape** → select the parent control (ignored while typing in an editor field).
+* **↑ / ↓** in the tree → move selection among visible (filtered) nodes.
+* Label toggles at the bottom: **Name**, **Class**, **Text** (Caption/Text), **Align** — any combination, including none. Defaults come from settings (see below).
+* Zoom from 25 % to 400 %; type a percentage and press Enter to apply.
+* **PPI / PixelsPerInch** — if the form stores a design-time PPI, bounds are scaled to 96 DPI logical pixels for display (default 96 = 1:1).
+
+**Property editing**
+
+* Click a property value to edit inline; **Enter** or blur saves, **Escape** cancels.
+* **…** opens an extended multi-line editor (useful for long captions / scripts).
+* Values are treated as plain text (no type checking). Prefer version control.
+* Delphi **`#xyz` string encoding** is handled on read/write:
+  * Decode on load: `'J'#228'nner'` → `Jänner`
+  * Encode on save: non-ASCII and control characters become `#n` codes
+  * Line breaks are stored as **`#13#10`** on a single DFM source line  
+    (e.g. `'Line1'#13#10'Line2'`), never as raw newlines in the file.
 
 **Align simulation.** The visualizer does not only show the raw coordinates written in the file. It runs a lightweight layout pass that approximates Delphi’s Align behaviour:
 
@@ -97,9 +121,9 @@ A side-by-side webview draws the form as a **box model**:
 | **VCL** (`.dfm`) | `alTop` / `alBottom` / `alLeft` / `alRight` stack along the edges; `alClient` fills the remaining client area. |
 | **FMX** (`.fmx`) | Same edge rules, plus `MostTop` / `MostBottom` / `MostLeft` / `MostRight` (higher priority), `Contents` (fills the whole parent and overlaps), `Center` / `VertCenter` / `HorzCenter` / `Horizontal` / `Vertical`. `Scale` / `Fit*` are approximated as Client. |
 
-Align is normalised (`alTop` → `Top`, etc.) and shown in the box label when it is not `None` (e.g. `StatusBar1 [Bottom]`).
+Align is normalised (`alTop` → `Top`, etc.) and can be shown in box labels when the **Align** toggle is on.
 
-The renderer is **pluggable**: `FormLayoutView` owns the shell (inspector, selection, messaging) and delegates the drawing surface to a render provider (`IRenderProvider`). The current implementation (`DomRenderProvider`) uses nested absolutely positioned divs; a Canvas or SVG provider can be added by implementing `buildCss()` / `buildClientScript()`, without touching the parser or the view host.
+The renderer is **pluggable**: `FormLayoutView` owns the shell (tree, inspector, selection, messaging) and delegates the drawing surface to a render provider (`IRenderProvider`). The current implementation (`DomRenderProvider`) uses nested absolutely positioned divs; a Canvas or SVG provider can be added by implementing `buildCss()` / `buildClientScript()`, without touching the parser or the view host.
 
 ## Configuration
 
@@ -118,6 +142,10 @@ Everything is configurable through settings (`Preferences → Settings → Exten
 | `delphi.colorScheme` | `auto` | Syntax color scheme for Delphi files only (global theme untouched): `auto` (follows your light/dark theme), `fancy`, `turboPascal`, `delphiDark`, `delphiLight` or `none`. |
 | `delphi.folding.sections` | `true` | Fold the four unit sections. |
 | `delphi.folding.beginEnd` | `true` | Fold `begin…end` style blocks. |
+| `delphi.formLayout.labels.showName` | `true` | Default: show component **Name** on boxes / title bar. |
+| `delphi.formLayout.labels.showClassName` | `false` | Default: show **class name**. |
+| `delphi.formLayout.labels.showCaption` | `false` | Default: show **Caption** / **Text**. |
+| `delphi.formLayout.labels.showAlign` | `false` | Default: show **Align** (when not `None`). |
 
 To change a shortcut, use `Preferences → Keyboard Shortcuts` and rebind `Delphi: Go to Method Implementation / Interface Section`, etc. (or edit `keybindings.json`).
 
@@ -132,14 +160,18 @@ To change a shortcut, use `Preferences → Keyboard Shortcuts` and rebind `Delph
 * Form layout visualizer:
   * Text DFM/FMX only (binary forms are not parsed).
   * Align simulation covers the common edge + Client cases well; it does **not** implement full FMX layout managers, per-control Margins/Padding, CustomAlign callbacks, or exact Fit/Scale aspect-ratio math.
-  * Non-visual components without size are omitted from the drawing (they still appear in the tree for hierarchy).
+  * Property edits are plain text (no type/syntax validation); multi-line string values are written as a single DFM line using `#13#10` character codes.
+  * DFM source that splits one string across physical lines with trailing `+` is only partially supported for round-trip editing.
+  * Non-visual components without size may be omitted from the drawing (they still appear in the tree).
 
 ## Development
 
 ```sh
-npm install          # only needed for tests (vscode-textmate + vscode-oniguruma)
-npm test             # unit tests: parser/navigation + grammar + form layout + commands + activation
-npm run test:formLayout   # only the DFM/FMX parser + Align layout engine + webview host
+npm install               # tests: vscode-textmate, vscode-oniguruma, Playwright
+npm test                  # unit tests: parser/navigation + grammar + form layout + commands
+npm run test:formLayout   # DFM/FMX parser, layout engine, webview host unit tests
+npm run test:webview      # Playwright browser tests for the form-layout webview UI
+npx playwright install chromium   # once, for test:webview
 ```
 
 Press `F5` in VS Code to launch the Extension Development Host.
