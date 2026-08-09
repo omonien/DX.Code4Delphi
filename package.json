@@ -36,7 +36,8 @@
     "theme": "light"
   },
   "activationEvents": [
-    "onLanguage:delphi"
+    "onLanguage:delphi",
+    "onLanguage:delphi-form"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -191,6 +192,15 @@
         "when": "editorLangId == delphi && editorTextFocus && config.delphi.navigation.enabled && config.delphi.keybindings.style == 'wordstar'"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "delphi.showFormLayout",
+          "when": "editorLangId == delphi-form || editorLangId == delphi",
+          "group": "navigation@1"
+        }
+      ]
+    },
     "configuration": {
       "title": "Code4Delphi",
       "properties": {
@@ -274,6 +284,26 @@
           "type": "boolean",
           "default": true,
           "description": "Provide fold regions for begin/end, case, try, record and class blocks."
+        },
+        "delphi.formLayout.labels.showName": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the component name on each box in the form layout visualizer."
+        },
+        "delphi.formLayout.labels.showClassName": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the class name on each box in the form layout visualizer."
+        },
+        "delphi.formLayout.labels.showCaption": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the Caption or Text property value on each box in the form layout visualizer."
+        },
+        "delphi.formLayout.labels.showAlign": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the Align value on each box in the form layout visualizer."
         }
       }
     }

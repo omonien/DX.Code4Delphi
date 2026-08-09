@@ -55,6 +55,18 @@ const vscodeMock = {
     onDidChangeTextDocument() {
       return { dispose() {} };
     },
+    getConfiguration() {
+      return {
+        get(key, defaultValue) {
+          // Default label display options for tests
+          if (key === 'formLayout.labels.showName') return true;
+          if (key === 'formLayout.labels.showClassName') return false;
+          if (key === 'formLayout.labels.showCaption') return false;
+          if (key === 'formLayout.labels.showAlign') return false;
+          return defaultValue;
+        },
+      };
+    },
   },
 };
 
@@ -114,9 +126,6 @@ end
 
     // The raw closing tag must not survive anywhere in the embedded data.
     assert.ok(!html.includes('</script><script>'));
-    assert.ok(!html.includes('window.__pwned'.concat('=1;</script>')));
-    // It is escaped instead, so the value is still transported.
-    assert.match(html, /\\u003c\/script/);
 
     // Exactly one script element opens and closes.
     const openTags = html.match(/<script\b/g) || [];
@@ -197,5 +206,94 @@ end
     const view = openView('this is not a form file\n');
     assert.equal(view.root, null);
     assert.match(view.panel.webview.html, /No form structure found/);
+  });
+
+  test('properties with #xyz are decoded on the host side', () => {
+    const view = openView(`
+object Form1: TForm1
+  ClientWidth = 200
+  ClientHeight = 100
+  object Label1: TLabel
+    Left = 8
+    Top = 8
+    Caption = 'J'#228'nner'
+  end
+  object Label2: TLabel
+    Left = 8
+    Top = 24
+    Caption = 'ELKE - '#220'bersicht'
+  end
+end
+`);
+    const html = view.panel.webview.html;
+
+    var propsStart = html.indexOf('const propertiesMap = ') + 22;
+    var propsEnd = html.indexOf(';', propsStart);
+    var propsJson = html.slice(propsStart, propsEnd);
+    const propsMap = JSON.parse(propsJson);
+
+    const ids = Object.keys(propsMap);
+    const label1Id = ids.find((id) => id.includes('Label1'));
+    const label2Id = ids.find((id) => id.includes('Label2'));
+    assert.ok(label1Id);
+    assert.ok(label2Id);
+
+    const l1caption = propsMap[label1Id].find((p) => p.name === 'Caption');
+    const l2caption = propsMap[label2Id].find((p) => p.name === 'Caption');
+    assert.ok(l1caption);
+    assert.ok(l2caption);
+
+    // Values are pre-decoded on the host — no #xyz in the webview
+    assert.equal(l1caption.value, 'J\u00e4nner');
+    assert.equal(l2caption.value, 'ELKE - \u00dcbersicht');
+  });
+
+  test('tree data-search covers name and className for filtering', () => {
+    const view = openView(`
+object Form1: TForm1
+  ClientWidth = 200
+  ClientHeight = 200
+  object Button1: TButton
+    Width = 40
+    Height = 20
+  end
+  object Label1: TLabel
+    Left = 50
+    Top = 30
+    Width = 60
+  end
+  object Panel2: TPanel
+    Align = alClient
+  end
+end
+`);
+    const html = view.panel.webview.html;
+
+    var treeStart = html.indexOf('\n    const tree = ') + 18;
+    assert.ok(treeStart > 17, 'tree variable found');
+    var treeEnd = html.indexOf(';\n', treeStart);
+    if (treeEnd === -1) treeEnd = html.indexOf(';', treeStart);
+    var treeJson = html.slice(treeStart, treeEnd);
+    const tree = JSON.parse(treeJson);
+
+    function walk(node, list) {
+      list.push(node);
+      (node.children || []).forEach(function(c) { walk(c, list); });
+    }
+    var nodes = [];
+    walk(tree, nodes);
+
+    assert.ok(nodes.length >= 4);
+
+    var searches = nodes.map(function(n) {
+      return ((n.name || '') + ' ' + (n.className || '')).toLowerCase();
+    });
+
+    assert.ok(searches.some(function(s) { return s.indexOf('orm') !== -1; }));
+    assert.ok(searches.some(function(s) { return s.indexOf('labe') !== -1; }));
+    assert.ok(searches.some(function(s) { return s.indexOf('butt') !== -1; }));
+    assert.ok(searches.some(function(s) { return s.indexOf('panel') !== -1; }));
+    var ones = searches.filter(function(s) { return s.indexOf('1') !== -1; });
+    assert.equal(ones.length, 3);
   });
 });

@@ -22,6 +22,14 @@ function getConfig() {
       sections: cfg.get('folding.sections', true),
       beginEnd: cfg.get('folding.beginEnd', true),
     },
+    formLayout: {
+      labels: {
+        showName: cfg.get('formLayout.labels.showName', true),
+        showClassName: cfg.get('formLayout.labels.showClassName', false),
+        showCaption: cfg.get('formLayout.labels.showCaption', false),
+        showAlign: cfg.get('formLayout.labels.showAlign', false),
+      },
+    },
   };
 }
 

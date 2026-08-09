@@ -104,7 +104,7 @@ function parseDfm(text) {
       applyLayoutProperty(current, propName, valueStr);
       // Only single-line text properties (no binary) for the inspector
       if (isTextPropertyValue(valueStr)) {
-        current.properties[propName] = valueStr;
+        current.properties[propName] = decodeDfmString(valueStr);
       }
       i++;
       continue;
@@ -134,6 +134,13 @@ function applyLayoutProperty(node, propName, valueStr) {
   // Align (string enum) – handle before numeric parse
   if (p === 'align') {
     node.align = normalizeAlign(valueStr);
+    return;
+  }
+
+  // PixelsPerInch / PixelPerInch – DPI scaling of design-time coordinates
+  if (p === 'pixelsperinch' || p === 'pixelperinch') {
+    const ppi = parseNumber(valueStr);
+    if (ppi !== null && ppi > 0) node.ppi = ppi;
     return;
   }
 
@@ -252,6 +259,26 @@ function skipComplexValue(lines, startIdx) {
 }
 
 /**
+ * Decode Delphi #xyz character encoding.
+ * 'J'#228'nner' → 'Jänner', #13#10 → '\r\n'
+ *
+ * @param {string} raw
+ * @returns {string}
+ */
+function decodeDfmString(raw) {
+  if (typeof raw !== 'string') return '';
+  let s = raw.trim();
+  s = s.replace(/#(\d{1,5})/g, (_, code) => {
+    const n = parseInt(code, 10);
+    return n <= 0x10FFFF ? String.fromCodePoint(n) : '';
+  });
+  s = s.replace(/''/g, '\u0000');
+  s = s.replace(/'/g, '');
+  s = s.replace(/\u0000/g, "'");
+  return s;
+}
+
+/**
  * Property names that typically hold binary or large streamed data in DFM/FMX.
  * Matched case-insensitively against the full property path (e.g. Picture.Data).
  */
@@ -314,4 +341,5 @@ module.exports = {
   getTextProperties,
   isBinaryPropertyName,
   isTextPropertyValue,
+  decodeDfmString,
 };

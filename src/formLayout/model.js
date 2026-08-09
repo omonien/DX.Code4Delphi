@@ -51,6 +51,8 @@ class FormNode {
      * Default 'None'.
      */
     this.align = align || 'None';
+    /** Design-time PixelsPerInch for DPI-aware scaling (default 96). */
+    this.ppi = 96;
     /** @type {FormNode|null} */
     this.parent = null;
   }

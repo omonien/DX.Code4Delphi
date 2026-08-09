@@ -42,10 +42,30 @@ const CLIENT_SCRIPT = `
       var viewport = document.createElement('div');
       viewport.className = 'c4d-viewport';
       host.appendChild(viewport);
+
+      var titleBar = document.createElement('div');
+      titleBar.id = 'form-title-bar';
+      titleBar.textContent = root ? (function() {
+        var parts = [];
+        if (showName && root.name) parts.push(root.name);
+        if (showClass) parts.push(root.className);
+        if (showCaption) {
+          var cap = nodeCaption(root);
+          if (cap) parts.push(cap);
+        }
+        if (showAlign && root.align && root.align !== 'None') parts.push('[' + root.align + ']');
+        return parts.join(' \u00b7 ') || root.name || root.className;
+      })() : '';
+      titleBar.addEventListener('click', function() {
+        if (root) select(root.id);
+      });
+      viewport.appendChild(titleBar);
+
       var stage = document.createElement('div');
       stage.className = 'c4d-stage';
       var rw = Math.max((root.bounds && root.bounds.width) || 400, 200);
       var rh = Math.max((root.bounds && root.bounds.height) || 300, 150);
+      titleBar.style.width = rw + 'px';
       stage.style.width = rw + 'px';
       stage.style.height = rh + 'px';
       viewport.appendChild(stage);
@@ -71,12 +91,13 @@ const CLIENT_SCRIPT = `
         el.style.height = Math.max(b.height || 16, 8) + 'px';
       }
 
-      var label = document.createElement('div');
-      label.className = 'c4d-label';
-      var alignSuffix = (node.align && node.align !== 'None') ? (' [' + node.align + ']') : '';
-      label.textContent = (node.name || ('(' + node.className + ')')) + alignSuffix;
-      label.title = (node.name || '') + ' : ' + node.className + alignSuffix;
-      el.appendChild(label);
+      // Only show labels on non-root nodes — the form title bar handles the root
+      if (!isRoot) {
+        var label = document.createElement('div');
+        label.className = 'c4d-label';
+        label.textContent = getLabelText(node);
+        el.appendChild(label);
+      }
 
       el.addEventListener('click', function(ev) {
         ev.stopPropagation();

@@ -35,6 +35,12 @@ function applyAlignLayout(root, options = {}) {
 
   ensureRootSize(root, options);
   layoutNode(root, framework);
+
+  // Scale design-time pixel coordinates to 96-PPI logical pixels
+  const ppi = root.ppi || 96;
+  if (ppi !== 96) {
+    scaleBounds(root, 96 / ppi);
+  }
 }
 
 /**
@@ -270,4 +276,24 @@ function placeEdgeAligned(list, client, _isMost) {
   }
 }
 
-module.exports = { applyAlignLayout, detectFramework, ensureRootSize };
+/**
+ * Scale all bounds (bounds + storedBounds) of every node in the tree
+ * by the given factor. Used to convert design-time PPI to 96-PPI logical pixels.
+ *
+ * @param {import('./model').FormNode} root
+ * @param {number} factor
+ */
+function scaleBounds(root, factor) {
+  root.walk((n) => {
+    const scale = (/** @type {{left:number,top:number,width:number,height:number}} */ b) => {
+      b.left = Math.round(b.left * factor);
+      b.top = Math.round(b.top * factor);
+      b.width = Math.round(b.width * factor);
+      b.height = Math.round(b.height * factor);
+    };
+    scale(n.bounds);
+    scale(n.storedBounds);
+  });
+}
+
+module.exports = { applyAlignLayout, detectFramework, ensureRootSize, scaleBounds };

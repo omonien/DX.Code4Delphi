@@ -4,6 +4,22 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const Module = require('node:module');
+
+// Mock vscode (required transitively by FormLayoutView)
+const originalLoad = Module._load;
+Module._load = function (request, parent, isMain) {
+  if (request === 'vscode') return {
+    window: {},
+    workspace: { getConfiguration: () => ({ get: () => {} }), onDidChangeTextDocument: () => ({ dispose() {} }) },
+    Uri: { parse: (s) => s, file: (s) => s },
+    ViewColumn: { One: 1 },
+    Position: class { constructor(l, c) { this.line = l; this.character = c; } },
+    Range: class { constructor(s, e) { this.start = s; this.end = e; } },
+    WorkspaceEdit: class { replace() {} },
+  };
+  return originalLoad.apply(this, arguments);
+};
 
 const {
   parseDfm,
@@ -17,6 +33,7 @@ const {
   detectFramework,
   ensureRootSize,
 } = require('../src/formLayout/layoutEngine.js');
+const { encodeDfmString } = require('../src/formLayout/FormLayoutView.js');
 
 function fixture(name) {
   return fs.readFileSync(path.join(__dirname, 'fixtures', 'forms', name), 'utf8');
@@ -491,7 +508,7 @@ end
     const root = parseDfm(text);
     const img = findChild(root, 'Image1');
     assert.ok(img);
-    assert.equal(img.properties.Caption, "'Hello'");
+    assert.equal(img.properties.Caption, 'Hello');
     assert.equal(img.properties.Align, 'alClient');
     assert.equal(img.properties['Picture.Data'], undefined);
     assert.equal(img.align, 'Client');
@@ -514,6 +531,52 @@ end
     }
     const caption = props.find((p) => p.name === 'Caption');
     assert.ok(caption);
-    assert.equal(caption.value, "'Top'");
+    assert.equal(caption.value, 'Top');
+  });
+});
+
+describe('DFM #xyz character encoding', () => {
+  test('parser decodes #xyz values into readable text', () => {
+    const root = parseDfm(fixture('DfmEncoding.dfm'));
+    assert.ok(root);
+    assert.equal(root.properties.Caption, 'ELKE - \u00dcbersicht');
+    const l1 = findChild(root, 'Label1');
+    assert.ok(l1);
+    assert.equal(l1.properties.Caption, 'J\u00e4nner');
+    const l3 = findChild(root, 'Label3');
+    assert.ok(l3);
+    assert.equal(l3.properties.Caption, 'au\u00dferhalb');
+  });
+
+  test('encodeDfmString – plain ASCII stays in quotes', () => {
+    assert.equal(encodeDfmString('Hello'), "'Hello'");
+    assert.equal(encodeDfmString(''), "''");
+    assert.equal(encodeDfmString('Line 1'), "'Line 1'");
+  });
+
+  test('encodeDfmString – non-ASCII chars become #xyz', () => {
+    assert.equal(encodeDfmString('J\u00e4nner'), "'J'#228'nner'");
+  });
+
+  test('encodeDfmString – mixed ASCII and non-ASCII', () => {
+    assert.equal(encodeDfmString('au\u00dferhalb'), "'au'#223'erhalb'");
+  });
+
+  test('encodeDfmString – control chars become #xyz', () => {
+    assert.equal(encodeDfmString('ab\rc\nd'), "'ab'#13'c'#10'd'");
+  });
+
+  test('encodeDfmString round-trip: encode then simulate decode', () => {
+    const roundtrip = (s) => {
+      var encoded = encodeDfmString(s);
+      var decoded = encoded.replace(/#(\d{1,5})/g, function(_, code) {
+        return String.fromCodePoint(parseInt(code, 10));
+      }).replace(/'/g, '');
+      return decoded;
+    };
+    assert.equal(roundtrip('J\u00e4nner'), 'J\u00e4nner');
+    assert.equal(roundtrip('Hello'), 'Hello');
+    assert.equal(roundtrip('l\u00f6schen'), 'l\u00f6schen');
+    assert.equal(roundtrip('ab\rc\nd'), 'ab\rc\nd');
   });
 });
