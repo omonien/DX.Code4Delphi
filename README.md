@@ -76,15 +76,30 @@ into Visual Studio Code:
    The default **`auto`** follows your VS Code light/dark theme. Only the
    Delphi highlighting changes — your global theme is never touched.
 
-4. **Code folding** — fold unit sections (`interface`, `implementation`, …) and
-   `begin…end`, `case`, `try`, `record` and `class` blocks; `{$REGION}` /
-   `{$ENDREGION}` markers work, too.
+4. **Code folding** — fold unit sections, `begin…end` blocks, `{$REGION}` markers
+   and conditional compiler directives (see below).
 
 5. **Editor conveniences** — comment toggling for `//` and `{ }`, auto-closing
    brackets and strings (incl. multi-line `'''…'''` literals), and correct
    word selection for identifiers like `TMyClass_123`.
 
 6. **Form layout visualizer** — box-model view of `.dfm` / `.fmx` with Align simulation (see below).
+
+### 4. Code folding
+
+A built-in folding provider for Delphi source (`.pas`, `.dpr`, …) supplies fold
+ranges that work with VS Code’s gutter chevrons and fold commands:
+
+| What folds | Markers / keywords | Setting |
+| --- | --- | --- |
+| **Unit sections** | `interface`, `implementation`, `initialization`, `finalization` | `delphi.folding.sections` |
+| **Structural blocks** | `begin…end`, `case`, `try`, `record`, `class`, `object`, `asm` | `delphi.folding.beginEnd` |
+| **Named regions** | `{$REGION}` … `{$ENDREGION}` (nested; optional label) | `delphi.folding.regions` |
+| **Conditionals** | `{$IFDEF}` / `{$IFNDEF}` / `{$IF …}` … `{$ENDIF}` / `{$IFEND}` (nested; `{$ELSE}` stays inside one fold) | `delphi.folding.conditionals` |
+
+`{$REGION}` folds are tagged as VS Code **region** folds, so **Fold All Regions** /
+**Unfold All Regions** apply to them. All four kinds default to **on** and can be
+disabled independently in settings.
 
 ### 5. Editor conveniences
 
@@ -161,8 +176,10 @@ Everything is configurable through settings (`Preferences → Settings → Exten
 | `delphi.navigation.showStatusMessage` | `false` | Show status-bar feedback on navigation. |
 | `delphi.keybindings.style` | `default` | Keybinding style for the navigation commands: `default`, `emacs` or `wordstar`. |
 | `delphi.colorScheme` | `auto` | Syntax color scheme for Delphi files only (global theme untouched): `auto` (follows your light/dark theme), `fancy`, `turboPascal`, `delphiDark`, `delphiLight` or `none`. |
-| `delphi.folding.sections` | `true` | Fold the four unit sections. |
-| `delphi.folding.beginEnd` | `true` | Fold `begin…end` style blocks. |
+| `delphi.folding.sections` | `true` | Fold the four unit sections (`interface` … `finalization`). |
+| `delphi.folding.beginEnd` | `true` | Fold `begin…end`, `case`, `try`, `record` and `class` blocks. |
+| `delphi.folding.regions` | `true` | Fold `{$REGION}` / `{$ENDREGION}` markers (VS Code region folds). |
+| `delphi.folding.conditionals` | `true` | Fold `{$IFDEF}` / `{$IF}` / `{$IFNDEF}` … `{$ENDIF}` / `{$IFEND}`. |
 | `delphi.formLayout.labels.showName` | `true` | Default: show component **Name** on boxes / title bar. |
 | `delphi.formLayout.labels.showClassName` | `false` | Default: show **class name**. |
 | `delphi.formLayout.labels.showCaption` | `false` | Default: show **Caption** / **Text**. |
