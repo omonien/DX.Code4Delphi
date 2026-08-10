@@ -4,7 +4,9 @@
   <img src="media/banner.png" alt="Code4Delphi by Developer Experts" width="640">
 </p>
 
-**Code4Delphi** by **[Developer Experts, LLC](https://www.developer-experts.net)** — Modern, high-quality **Delphi / Object Pascal** language support for Visual Studio Code, covering the latest Delphi language features (through **Delphi 13.1** and all older versions back to Delphi 7), plus the code-navigation shortcuts Delphi developers expect from the RAD Studio IDE.
+**Code4Delphi** — Modern, high-quality **Delphi / Object Pascal** language support for Visual Studio Code, covering the latest Delphi language features (through **Delphi 13.1** and all older versions back to Delphi 7), plus the code-navigation shortcuts Delphi developers expect from the RAD Studio IDE.
+
+**Author:** Olaf Monien, Embarcadero MVP · [Developer Experts, LLC](https://www.developer-experts.net)
 
 ## Quick Info
 
@@ -12,7 +14,7 @@
 
 | | |
 | --- | --- |
-| 🎨 **Syntax Highlighting** | Modern, high-quality **Delphi 13.1** syntax highlighting — all latest language features plus full support for older Delphi code, in `.pas`, `.pp`, `.dpr`, `.dpk`, `.inc`, `.p` and `.int` files. |
+| 🎨 **Syntax Highlighting** | Modern, high-quality **Delphi 13.1** syntax highlighting — all latest language features plus full support for older Delphi code, in `.pas`, `.pp`, `.dpr`, `.dpk`, `.inc`, `.p`, `.int` and form files (`.dfm` / `.fmx`). |
 | ⌨️ **Familiar Keybindings** | The **Delphi IDE shortcuts you already know**: `Ctrl+Shift+↓` / `Ctrl+Alt+↓` → interface ↔ implementation, `Ctrl+Shift+↑` / `Ctrl+Alt+↑` → back to declaration, `Alt+↓` / `Alt+↑` → next / previous method. |
 | 📐 **Form Layout Visualizer** | Open any `.dfm` / `.fmx` (or sibling `.pas`) and run **Code4Delphi: Show Form Layout** — box-model layout, control tree, Align simulation and text properties. Works on **Windows, Linux and macOS**. |
 
@@ -59,7 +61,8 @@ into Visual Studio Code:
    covers the complete **Delphi 13.1** language and every older version. Unit
    sections, class/record/interface declarations, generics, attributes,
    operator overloading, managed records and multi-line string literals are all
-   colored precisely — in any theme.
+   colored precisely — in any theme. **`.dfm` / `.fmx` form files** get the
+   same schemes (object hierarchy, properties, strings, numbers, collections).
 
 2. **Delphi-IDE code navigation** — jump from an `interface` method declaration
    to its `implementation` (`Ctrl+Shift+↓`), back with `Ctrl+Shift+↑`, and step
@@ -199,3 +202,7 @@ Marketplace publishing (publisher `DeveloperExperts`, PAT expiry, `vsce` command
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Trademarks
+
+Delphi and Embarcadero are trademarks or registered trademarks of Embarcadero Technologies, Inc. or its affiliates in the United States and/or other countries. All other trademarks are the property of their respective owners. This project is not affiliated with, endorsed by, or sponsored by Embarcadero Technologies, Inc.

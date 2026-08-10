@@ -5,6 +5,29 @@ All notable changes to **Code4Delphi** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] — 2026-08-10
+
+### Fixed
+
+- **DFM/FMX grammar hardening** (code review): enum-like values (`alTop`,
+  `akLeft`, `clBtnFace`, …) now render in plain default color instead of bold
+  keyword color, matching the Delphi IDE screenshots; multi-line `(* … *)`
+  comments tokenize correctly; bare `inherited` / name-only `object` headers
+  are keywords; FMX collections only open after `= <`, preventing quadratic
+  tokenization blowup on stray `<` input; removed unreachable grammar rules
+  and dead tmLanguage folding markers.
+
+## [2.0.1] — 2026-08-10
+
+### Added
+
+- **DFM / FMX syntax highlighting** — TextMate grammar for `.dfm` / `.fmx`
+  (`object` / `inherited` / `inline` / `end` / `item`, property assignments,
+  strings with `#nnn` char codes, numbers, sets, collections, binary `{hex}`
+  blocks). Uses the same token scopes as Delphi source, so all four color
+  schemes (Fancy, Turbo Pascal, Delphi Dark, Delphi Light) color forms with
+  the authentic IDE palette from the screenshots.
+
 ## [2.0.0] — 2026-08-10
 
 ### Added
