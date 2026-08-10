@@ -45,7 +45,7 @@ const CLIENT_SCRIPT = `
 
       var titleBar = document.createElement('div');
       titleBar.id = 'form-title-bar';
-      titleBar.textContent = root ? getLabelText(root, true) : '';
+      titleBar.textContent = getLabelText(root, true);
       titleBar.addEventListener('click', function() {
         if (root) select(root.id);
       });

@@ -71,11 +71,6 @@ class FormNode {
     return this.parent ? `${this.parent.id}::${own}` : own;
   }
 
-  get hasExplicitBounds() {
-    const b = this.bounds;
-    return b.width > 0 || b.height > 0 || b.left !== 0 || b.top !== 0;
-  }
-
   /** Flatten tree depth-first */
   walk(callback) {
     callback(this);

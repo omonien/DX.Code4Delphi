@@ -2,7 +2,7 @@
 
 const vscode = require('vscode');
 const path = require('path');
-const { parseDfm, getTextProperties } = require('./parser.js');
+const { parseDfm, getTextProperties, stripTrailingComment } = require('./parser.js');
 const { applyAlignLayout } = require('./layoutEngine.js');
 const { DomRenderProvider } = require('./render/DomRenderProvider.js');
 const { getConfig } = require('../configuration.js');
@@ -12,6 +12,17 @@ const { buildSearchText, computeTreeFilterHidden } = require('./treeFilter.js');
 const RENDER_PROVIDERS = {
   [DomRenderProvider.id]: DomRenderProvider,
 };
+
+/**
+ * Label display options: option key ↔ webview checkbox id.
+ * Single source for host, webview script and the settings schema keys.
+ */
+const LABEL_OPTIONS = [
+  { key: 'showName', id: 'opt-name' },
+  { key: 'showClassName', id: 'opt-class' },
+  { key: 'showCaption', id: 'opt-caption' },
+  { key: 'showAlign', id: 'opt-align' },
+];
 
 /**
  * Manages a single Form Layout webview panel for a given document.
@@ -26,7 +37,6 @@ class FormLayoutView {
    * @param {string} [options.providerId='dom']
    */
   constructor(context, document, options = {}) {
-    this.context = context;
     this.document = document;
     this.providerId = options.providerId || DomRenderProvider.id;
 
@@ -57,6 +67,8 @@ class FormLayoutView {
     this._suppressRefresh = false;
     /** @type {ReturnType<typeof setTimeout>|null} */
     this._refreshTimer = null;
+    /** True once the initial webview HTML has been sent; updates go via postMessage. */
+    this._bootstrapped = false;
 
     this._changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() === this.document.uri.toString() && !this._suppressRefresh) {
@@ -137,7 +149,19 @@ class FormLayoutView {
       highlightedIds: Array.from(this._buildHighlightedIds()),
       labelOpts: this._labelOpts,
     };
-    this.panel.webview.html = this._getHtml(this.root, state, this._buildPropertiesMap());
+    const propertiesMap = this._buildPropertiesMap();
+    if (this._bootstrapped) {
+      // In-place update — avoids a full webview iframe teardown per refresh
+      this.panel.webview.postMessage({
+        type: 'update',
+        tree: serializeNode(this.root),
+        state,
+        propertiesMap,
+      });
+    } else {
+      this.panel.webview.html = this._getHtml(this.root, state, propertiesMap);
+      this._bootstrapped = true;
+    }
   }
 
   /**
@@ -152,7 +176,10 @@ class FormLayoutView {
     const nonce = getNonce();
     const providerScript = this.renderProvider.buildClientScript();
     const providerCss = this.renderProvider.buildCss();
-    const labelConfig = embedJson(getConfig().formLayout.labels);
+    const labelOptionsJson = embedJson(LABEL_OPTIONS);
+    // Pure filter functions are shared verbatim with the webview (single source)
+    const treeFilterSrc =
+      buildSearchText.toString() + '\n' + computeTreeFilterHidden.toString();
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -199,10 +226,17 @@ class FormLayoutView {
   <script nonce="${nonce}">
     try {
     const vscode = acquireVsCodeApi();
-    const tree = ${treeJson};
-    const initialState = ${stateJson};
-    const propertiesMap = ${propsJson};
-    const labelConfig = ${labelConfig};
+    const LABEL_OPTIONS = ${labelOptionsJson};
+    ${treeFilterSrc}
+
+    // Persistent UI state (survives in-place data updates)
+    var zoomLevel = 1;
+    // Data-dependent state, (re)applied by applyData()
+    var root = null;
+    var propertiesMap = {};
+    var selectedId = null;
+    var highlightedIds = new Set();
+    var labelFlags = { showName: true, showClassName: false, showCaption: false, showAlign: false };
 
     function rehydrate(node, parent) {
       if (!node) return null;
@@ -227,7 +261,6 @@ class FormLayoutView {
       };
       return node;
     }
-    const root = rehydrate(tree);
 
     const host = document.getElementById('host');
     const inspectorBody = document.getElementById('inspector-body');
@@ -236,9 +269,6 @@ class FormLayoutView {
     const zoomInput = document.getElementById('zoom-input');
     const toggleTree = document.getElementById('tree-toggle');
     const toggleInspector = document.getElementById('inspector-toggle');
-    let selectedId = initialState.selectedId || null;
-    let highlightedIds = new Set(initialState.highlightedIds || []);
-    let zoomLevel = 1;
 
     function updateZoomInput() {
       zoomInput.value = Math.round(zoomLevel * 100);
@@ -285,27 +315,23 @@ class FormLayoutView {
       }
     });
 
-    // Label display flags from state (persisted) or extension config (default)
-    var showName = (initialState.labelOpts || labelConfig).showName;
-    var showClass = (initialState.labelOpts || labelConfig).showClassName;
-    var showCaption = (initialState.labelOpts || labelConfig).showCaption;
-    var showAlign = (initialState.labelOpts || labelConfig).showAlign;
-
-    document.getElementById('opt-name').checked = showName;
-    document.getElementById('opt-class').checked = showClass;
-    document.getElementById('opt-caption').checked = showCaption;
-    document.getElementById('opt-align').checked = showAlign;
+    function syncLabelFlags() {
+      LABEL_OPTIONS.forEach(function(o) {
+        var el = document.getElementById(o.id);
+        if (el) labelFlags[o.key] = !!el.checked;
+      });
+    }
 
     function getLabelText(node, fallback) {
       var parts = [];
-      if (showName && node.name) parts.push(node.name);
-      if (showClass) parts.push(node.className);
-      if (showCaption) {
+      if (labelFlags.showName && node.name) parts.push(node.name);
+      if (labelFlags.showClassName) parts.push(node.className);
+      if (labelFlags.showCaption) {
         var cap = nodeCaption(node);
         if (cap) parts.push(cap);
       }
-      if (showAlign && node.align && node.align !== 'None') parts.push('[' + node.align + ']');
-      var joined = parts.join(' \u00b7 ');
+      if (labelFlags.showAlign && node.align && node.align !== 'None') parts.push('[' + node.align + ']');
+      var joined = parts.join(' · ');
       if (joined) return joined;
       if (fallback) return node.name || node.className || '';
       return '';
@@ -337,18 +363,17 @@ class FormLayoutView {
     }
 
     function onLabelOptChange() {
-      showName = document.getElementById('opt-name').checked;
-      showClass = document.getElementById('opt-class').checked;
-      showCaption = document.getElementById('opt-caption').checked;
-      showAlign = document.getElementById('opt-align').checked;
+      syncLabelFlags();
       refreshLabels();
-      vscode.postMessage({ type: 'labelOpts', showName: showName, showClassName: showClass, showCaption: showCaption, showAlign: showAlign });
+      var msg = { type: 'labelOpts' };
+      LABEL_OPTIONS.forEach(function(o) { msg[o.key] = !!labelFlags[o.key]; });
+      vscode.postMessage(msg);
     }
 
-    document.getElementById('opt-name').addEventListener('change', onLabelOptChange);
-    document.getElementById('opt-class').addEventListener('change', onLabelOptChange);
-    document.getElementById('opt-caption').addEventListener('change', onLabelOptChange);
-    document.getElementById('opt-align').addEventListener('change', onLabelOptChange);
+    LABEL_OPTIONS.forEach(function(o) {
+      var el = document.getElementById(o.id);
+      if (el) el.addEventListener('change', onLabelOptChange);
+    });
 
 ${providerScript}
 
@@ -563,8 +588,7 @@ ${providerScript}
     function buildTreeNode(node, parentUl) {
       var li = document.createElement('li');
       li.dataset.treeId = node.id;
-      // Keep in sync with treeFilter.buildSearchText
-      li.setAttribute('data-search', ((node.name || '') + ' ' + (node.className || '')).toLowerCase());
+      li.setAttribute('data-search', buildSearchText(node.name, node.className));
       li.className = 'c4d-tree-item';
 
       var row = document.createElement('div');
@@ -673,66 +697,78 @@ ${providerScript}
       toggleInspector.innerHTML = collapsed ? '&#x25C2;' : '&#x25B8;';
     });
 
-    buildTree();
-    renderLayout();
-    applyZoom();
-    // Rebuild selection/highlights from id (do not trust stale highlightedIds alone)
-    if (selectedId && root && root.findById(selectedId)) {
-      select(selectedId);
-    }
-
     var treeFilter = document.getElementById('tree-filter');
     treeFilter.addEventListener('input', function() {
       applyTreeFilter(treeFilter.value || '');
     });
 
     /**
-     * Filter tree items by substring match on data-search + visible label.
-     * Matching nodes stay visible; ancestors of matches stay visible too.
-     * Algorithm mirrors src/formLayout/treeFilter.js (computeTreeFilterHidden).
+     * Filter tree items via the shared pure implementation (treeFilter.js),
+     * which is embedded verbatim into this script by _getHtml.
      */
     function applyTreeFilter(query) {
-      var q = (query || '').toLowerCase();
       var items = Array.prototype.slice.call(treeBody.querySelectorAll('.c4d-tree-item'));
-      var n = items.length;
-      if (!q) {
-        for (var c = 0; c < n; c++) items[c].classList.remove('c4d-tree-item-hidden');
-        return;
-      }
-
-      var show = new Array(n);
-      var parents = new Array(n);
-      for (var i = 0; i < n; i++) {
-        var item = items[i];
-        var rowEl = item.firstElementChild;
-        var labelEl = rowEl ? rowEl.querySelector('.c4d-tree-label') : null;
-        var labelText = labelEl ? String(labelEl.textContent || '').toLowerCase() : '';
-        var hay = (item.getAttribute('data-search') || '') + ' ' + labelText;
-        show[i] = hay.indexOf(q) !== -1;
-
-        // parent li is ul.c4d-tree-list's parent
+      var idxByEl = new Map();
+      items.forEach(function(el, k) { idxByEl.set(el, k); });
+      var entries = items.map(function(item) {
         var parentItem = null;
         var ul = item.parentElement;
         if (ul && ul.classList.contains('c4d-tree-list')) {
           var maybe = ul.parentElement;
           if (maybe && maybe.classList.contains('c4d-tree-item')) parentItem = maybe;
         }
-        parents[i] = parentItem ? items.indexOf(parentItem) : -1;
-      }
-
-      for (var j = 0; j < n; j++) {
-        if (!show[j]) continue;
-        var p = parents[j];
-        while (p >= 0) {
-          show[p] = true;
-          p = parents[p];
-        }
-      }
-
-      for (var k = 0; k < n; k++) {
-        items[k].classList.toggle('c4d-tree-item-hidden', !show[k]);
-      }
+        return {
+          search: item.getAttribute('data-search') || '',
+          parent: parentItem != null ? idxByEl.get(parentItem) : null,
+        };
+      });
+      var hidden = computeTreeFilterHidden(entries, query);
+      items.forEach(function(el, k) {
+        el.classList.toggle('c4d-tree-item-hidden', !!hidden[k]);
+      });
     }
+
+    /**
+     * (Re)apply the data payload. Runs once at bootstrap and again on every
+     * host-side update message, without rebuilding the webview document.
+     */
+    function applyData(treeData, stateData, propsData) {
+      root = rehydrate(treeData);
+      propertiesMap = propsData || {};
+      selectedId = (stateData && stateData.selectedId) || null;
+      highlightedIds = new Set((stateData && stateData.highlightedIds) || []);
+      var lo = (stateData && stateData.labelOpts) || {};
+      LABEL_OPTIONS.forEach(function(o) {
+        var el = document.getElementById(o.id);
+        if (el && Object.prototype.hasOwnProperty.call(lo, o.key)) el.checked = !!lo[o.key];
+      });
+      syncLabelFlags();
+      buildTree();
+      renderLayout();
+      applyZoom();
+      if (selectedId && root && root.findById(selectedId)) {
+        select(selectedId);
+      } else {
+        selectedId = null;
+        highlightedIds = new Set();
+        applySelection();
+        applyTreeSelection();
+        renderInspector(null);
+      }
+      applyTreeFilter(treeFilter.value || '');
+    }
+
+    window.addEventListener('message', function(ev) {
+      var m = ev.data;
+      if (m && m.type === 'update') {
+        applyData(m.tree, m.state, m.propertiesMap);
+      }
+    });
+
+    const bootTree = ${treeJson};
+    const bootState = ${stateJson};
+    const bootProps = ${propsJson};
+    applyData(bootTree, bootState, bootProps);
 
     document.addEventListener('keydown', function(ev) {
       if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
@@ -781,12 +817,9 @@ ${providerScript}
     } else if (msg.type === 'setProp') {
       this._setProperty(msg.nodeId, msg.propName, msg.value);
     } else if (msg.type === 'labelOpts') {
-      this._labelOpts = {
-        showName: msg.showName,
-        showClassName: msg.showClassName,
-        showCaption: msg.showCaption,
-        showAlign: msg.showAlign,
-      };
+      const opts = {};
+      for (const { key } of LABEL_OPTIONS) opts[key] = !!msg[key];
+      this._labelOpts = opts;
     }
   }
 
@@ -840,8 +873,7 @@ ${providerScript}
       if (m) {
         const prefix = m[1];
         let oldVal = m[2].trim();
-        const commentIdx = oldVal.indexOf('//');
-        if (commentIdx >= 0) oldVal = oldVal.slice(0, commentIdx).trim();
+        oldVal = stripTrailingComment(oldVal);
 
         const asString = isDfmStringValue(oldVal) || looksLikeStringProp(propName);
         // Newlines in non-string props would break the DFM line structure
@@ -1439,6 +1471,4 @@ module.exports = {
   encodeDfmString,
   isDfmStringValue,
   looksLikeStringProp,
-  buildSearchText,
-  computeTreeFilterHidden,
 };

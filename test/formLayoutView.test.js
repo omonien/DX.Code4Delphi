@@ -4,132 +4,28 @@
  * Tests for the webview host: HTML generation, script-safe embedding of
  * arbitrary DFM text, and id-based selection / "go to source".
  *
- * `vscode` is not resolvable outside the extension host, so it is mocked
- * through Module._load the same way test/extension.test.js does it.
+ * `vscode` is mocked via the shared test/helpers/vscodeMock.js.
  */
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
-const Module = require('node:module');
+const mock = require('./helpers/vscodeMock.js');
 
-class Position {
-  constructor(line, character) { this.line = line; this.character = character; }
-}
-class Range {
-  constructor(start, end) { this.start = start; this.end = end; }
-}
-
-const shownDocuments = [];
-
-function createPanel() {
-  return {
-    webview: {
-      html: '',
-      onDidReceiveMessage(handler) {
-        this._handler = handler;
-        return { dispose() {} };
-      },
-    },
-    reveal() {},
-    onDidDispose() { return { dispose() {} }; },
-  };
-}
-
-let lastPanel = null;
-
-class WorkspaceEdit {
-  constructor() {
-    this.replacements = [];
-  }
-  replace(uri, range, text) {
-    this.replacements.push({ uri, range, text });
-  }
-}
-
-const vscodeMock = {
-  Position,
-  Range,
-  WorkspaceEdit,
-  ViewColumn: { One: 1, Beside: 2 },
-  window: {
-    createWebviewPanel() {
-      lastPanel = createPanel();
-      return lastPanel;
-    },
-    showTextDocument(document, options) {
-      shownDocuments.push({ document, options });
-    },
-    showInformationMessage() {},
-  },
-  workspace: {
-    onDidChangeTextDocument() {
-      return { dispose() {} };
-    },
-    applyEdit(edit) {
-      // Apply text replacements to the mock document bound on the edit uri
-      for (const rep of edit.replacements || []) {
-        const doc = documentsByUri.get(rep.uri.toString());
-        if (!doc) continue;
-        const lines = doc.getText().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-        const line = rep.range.start.line;
-        const startCol = rep.range.start.character;
-        const endCol = rep.range.end.character;
-        const row = lines[line] || '';
-        lines[line] = row.slice(0, startCol) + rep.text + row.slice(endCol);
-        doc._text = lines.join('\n');
-      }
-      return Promise.resolve(true);
-    },
-    getConfiguration() {
-      return {
-        get(key, defaultValue) {
-          // Default label display options for tests
-          if (key === 'formLayout.labels.showName') return true;
-          if (key === 'formLayout.labels.showClassName') return false;
-          if (key === 'formLayout.labels.showCaption') return false;
-          if (key === 'formLayout.labels.showAlign') return false;
-          return defaultValue;
-        },
-      };
-    },
-  },
-};
-
-const documentsByUri = new Map();
-
-const originalLoad = Module._load;
-Module._load = function (request, parent, isMain) {
-  if (request === 'vscode') return vscodeMock;
-  return originalLoad.apply(this, arguments);
-};
+mock.install();
 
 const { FormLayoutView } = require('../src/formLayout/FormLayoutView.js');
 
-function makeDocument(text, fileName = '/tmp/Test.dfm') {
-  const uriStr = 'file://' + fileName;
-  const doc = {
-    fileName,
-    uri: { toString: () => uriStr, fsPath: fileName },
-    _text: text,
-    getText() {
-      return this._text;
-    },
-  };
-  documentsByUri.set(uriStr, doc);
-  return doc;
-}
+const shownDocuments = mock.shownDocuments;
 
 function openView(text, fileName) {
   const context = { subscriptions: [] };
-  const view = new FormLayoutView(context, makeDocument(text, fileName));
+  const view = new FormLayoutView(context, mock.makeDocument(text, fileName));
   return view;
 }
 
-function extractInitialState(html) {
-  const marker = 'const initialState = ';
-  const start = html.indexOf(marker) + marker.length;
-  const end = html.indexOf(';', start);
-  return JSON.parse(html.slice(start, end));
+function lastPosted(view) {
+  const posted = view.panel.webview.posted;
+  return posted.length ? posted[posted.length - 1] : null;
 }
 
 describe('FormLayoutView webview HTML', () => {
@@ -267,8 +163,9 @@ end
 `);
     const html = view.panel.webview.html;
 
-    var propsStart = html.indexOf('const propertiesMap = ') + 22;
-    var propsEnd = html.indexOf(';', propsStart);
+    var propsStart = html.indexOf('const bootProps = ') + 18;
+    var propsEnd = html.indexOf(';\n', propsStart);
+    if (propsEnd === -1) propsEnd = html.indexOf(';', propsStart);
     var propsJson = html.slice(propsStart, propsEnd);
     const propsMap = JSON.parse(propsJson);
 
@@ -309,8 +206,8 @@ end
 `);
     const html = view.panel.webview.html;
 
-    var treeStart = html.indexOf('\n    const tree = ') + 18;
-    assert.ok(treeStart > 17, 'tree variable found');
+    var treeStart = html.indexOf('\n    const bootTree = ') + 22;
+    assert.ok(treeStart > 21, 'tree variable found');
     var treeEnd = html.indexOf(';\n', treeStart);
     if (treeEnd === -1) treeEnd = html.indexOf(';', treeStart);
     var treeJson = html.slice(treeStart, treeEnd);
@@ -373,12 +270,44 @@ end
     });
 
     assert.equal(view.selectedId, 'Form1::Label1', 'host keeps selectedId after edit');
-    const state = extractInitialState(view.panel.webview.html);
-    assert.equal(state.selectedId, 'Form1::Label1', 'webview state carries selectedId');
+    const update = lastPosted(view);
+    assert.ok(update && update.type === 'update', 'refresh went through postMessage update');
+    assert.equal(update.state.selectedId, 'Form1::Label1', 'update state carries selectedId');
     assert.ok(
       view.document.getText().includes("'World'") || view.document.getText().includes('World'),
       'document was updated'
     );
+  });
+
+  test('labelOpts round-trip: toggles survive a refresh', () => {
+    const view = openView(`
+object Form1: TForm1
+  ClientWidth = 100
+  ClientHeight = 100
+end
+`);
+    view.panel.webview._handler({
+      type: 'labelOpts',
+      showName: false,
+      showClassName: true,
+      showCaption: true,
+      showAlign: false,
+    });
+    assert.deepEqual(view._labelOpts, {
+      showName: false,
+      showClassName: true,
+      showCaption: true,
+      showAlign: false,
+    });
+    view._updateHtml();
+    const update = lastPosted(view);
+    assert.ok(update && update.type === 'update');
+    assert.deepEqual(update.state.labelOpts, {
+      showName: false,
+      showClassName: true,
+      showCaption: true,
+      showAlign: false,
+    });
   });
 
   test('setProp encodes newlines as #13#10 in string properties', async () => {

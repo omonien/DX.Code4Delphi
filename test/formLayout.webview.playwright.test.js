@@ -170,6 +170,51 @@ end
     await page.close();
   });
 
+  test('update message re-renders tree in place (no iframe reload)', async () => {
+    const { page } = await openPage();
+    // Marker that only survives an in-place update (a full reload would wipe it)
+    await page.evaluate(() => { window.__marker = 42; });
+    await page.evaluate(() => {
+      const tree = {
+        id: 'Form1', name: 'Form1', className: 'TForm1', kind: 'object',
+        align: 'None', ppi: 96,
+        bounds: { left: 0, top: 0, width: 220, height: 80 },
+        storedBounds: { left: 0, top: 0, width: 220, height: 80 },
+        startLine: 0, endLine: 10,
+        children: [
+          {
+            id: 'Form1::Extra1', name: 'Extra1', className: 'TLabel', kind: 'object',
+            align: 'None', ppi: 96,
+            bounds: { left: 8, top: 8, width: 60, height: 13 },
+            storedBounds: { left: 8, top: 8, width: 60, height: 13 },
+            startLine: 1, endLine: 2, children: [],
+          },
+        ],
+      };
+      window.dispatchEvent(new MessageEvent('message', {
+        data: {
+          type: 'update',
+          tree,
+          state: {
+            selectedId: null,
+            highlightedIds: [],
+            labelOpts: { showName: true, showClassName: false, showCaption: false, showAlign: false },
+          },
+          propertiesMap: {},
+        },
+      }));
+    });
+    await page.waitForTimeout(50);
+    const marker = await page.evaluate(() => window.__marker);
+    assert.equal(marker, 42, 'no iframe reload — JS state survived');
+    const labels = await page
+      .locator('.c4d-tree-item > .c4d-tree-row > .c4d-tree-label')
+      .allTextContents();
+    assert.ok(labels.includes('Extra1'), 'tree updated in place');
+    assert.ok(!labels.includes('Label1'), 'old tree replaced');
+    await page.close();
+  });
+
   test('selection chrome remains when HTML is rebuilt with selectedId', async () => {
     // Simulates host refresh after setProp: new HTML carries selectedId
     const { page } = await openPage(DFM, { selectedId: 'Form1::Label1' });
