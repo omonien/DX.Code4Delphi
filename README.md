@@ -8,12 +8,13 @@
 
 ## Quick Info
 
-**Syntax Highlighting** & **Familiar Keybindings** for **Delphi in Visual Studio Code** — out of the box:
+**Syntax Highlighting**, **Familiar Keybindings** & **Form Layout** for **Delphi in Visual Studio Code** — out of the box:
 
 | | |
 | --- | --- |
 | 🎨 **Syntax Highlighting** | Modern, high-quality **Delphi 13.1** syntax highlighting — all latest language features plus full support for older Delphi code, in `.pas`, `.pp`, `.dpr`, `.dpk`, `.inc`, `.p` and `.int` files. |
 | ⌨️ **Familiar Keybindings** | The **Delphi IDE shortcuts you already know**: `Ctrl+Shift+↓` / `Ctrl+Alt+↓` → interface ↔ implementation, `Ctrl+Shift+↑` / `Ctrl+Alt+↑` → back to declaration, `Alt+↓` / `Alt+↑` → next / previous method. |
+| 📐 **Form Layout Visualizer** | Open any `.dfm` / `.fmx` (or sibling `.pas`) and run **Code4Delphi: Show Form Layout** — box-model layout, control tree, Align simulation and text properties. Works on **Windows, Linux and macOS**. |
 
 ## Why Code4Delphi?
 
@@ -24,8 +25,9 @@ is great when you need all of it — and heavy when you don't.
 
 **Code4Delphi is deliberately lightweight:**
 
-* 🎨 just excellent **syntax highlighting** and
-* ⌨️ the **familiar Delphi keybindings** for fast code navigation —
+* 🎨 just excellent **syntax highlighting**,
+* ⌨️ the **familiar Delphi keybindings** for fast code navigation, and
+* 📐 a **form layout visualizer** for `.dfm` / `.fmx` —
 * 🪶 **no Language Server (LSP)**, no build integration, no telemetry, **zero
   runtime dependencies**.
 
@@ -35,6 +37,14 @@ directly in the extension host. It is purely syntax-based (lexical) and needs
 **no external components**: nothing to download, no server to start, no extra
 memory beyond the document itself. That keeps the extension small, fast to
 install, and instant to activate.
+
+**Forms without the full IDE.** Opening a form or data module in the Delphi IDE
+expects **every component package used on that form to be installed** in the IDE.
+Missing design-time packages are a common blocker — especially when reviewing
+legacy code, third-party forms, or AI-generated DFMs, and especially when you are
+not on Windows. Code4Delphi’s visualizer shows **layout, hierarchy and text
+properties** from the form file alone: lightweight, easy, and it works on
+**macOS** (and Linux) as well as Windows.
 
 It activates instantly and stays out of your way — the ideal companion when you
 want to **read, review and inspect Delphi code**, for example code written by
@@ -84,6 +94,14 @@ into Visual Studio Code:
 Open any `.dfm` or `.fmx` file (or a `.pas` that has a sibling form) and run
 **Code4Delphi: Show Form Layout** (Command Palette, or the editor context menu
 on Delphi / form files).
+
+> **Not a design-time renderer.**  
+> The visualizer deliberately does **not** try to paint real VCL/FMX controls.
+> Doing that would require the **compiled design-time packages** for every
+> component on the form — exactly the heavy, Windows-centric dependency this
+> extension avoids. What you get instead is a **structural box model**: bounds,
+> Align, ownership tree and text properties parsed from the form file. Enough to
+> understand and edit layout without installing the full component set in an IDE.
 
 A three-pane webview shows the form as a **box model**:
 
