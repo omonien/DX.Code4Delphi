@@ -84,14 +84,24 @@ function parseDfm(text) {
       const propName = propMatch[1];
       let valueStr = propMatch[2].trim();
 
+      // TStrings parenthesized lists – extract strings and store
+      if (valueStr.startsWith('(')) {
+        const extracted = extractStringsList(lines, i);
+        const current = stack[stack.length - 1];
+        if (extracted.value && isTextPropertyValue(extracted.value)) {
+          current.properties[propName] = extracted.value;
+        }
+        i = extracted.nextIndex;
+        continue;
+      }
+
       // Multi-line / binary / collection values – skip without storing
       if (
         isBinaryPropertyName(propName) ||
         valueStr === '' ||
         valueStr.endsWith('{') ||
         valueStr.startsWith('{') ||
-        valueStr.startsWith('<') ||
-        valueStr.startsWith('(')
+        valueStr.startsWith('<')
       ) {
         i = skipComplexValue(lines, i);
         continue;
@@ -122,6 +132,61 @@ function parseDfm(text) {
 
   // If the file never closed the root, still return what we have
   return root;
+}
+
+/**
+ * Extract string values from a TStrings-style parenthesized DFM list.
+ *
+ * Lines inside `(...)` are decoded with `decodeDfmString` and joined with
+ * `\n`. The closing `)` may appear on its own line or at the end of the last
+ * value line. Stops on the next structural element (object/end/property) if
+ * the closing paren was never found.
+ *
+ * @param {string[]} lines
+ * @param {number} startIdx  index of the `prop = (` line
+ * @returns {{ value: string, nextIndex: number }}
+ */
+function extractStringsList(lines, startIdx) {
+  const values = [];
+  let i = startIdx + 1;
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+
+    if (!line) { i++; continue; }
+
+    // Standalone closing paren
+    if (line === ')') {
+      i++;
+      break;
+    }
+
+    // Hit the next structural element – stop
+    if (END_RE.test(line) || OBJECT_RE.test(line) || PROP_RE.test(line)) {
+      break;
+    }
+
+    let s = line;
+    let closed = false;
+    if (s.endsWith(')')) {
+      s = s.slice(0, -1).trim();
+      closed = true;
+    }
+
+    if (s) {
+      values.push(decodeDfmString(s));
+    }
+
+    if (closed) {
+      i++;
+      break;
+    }
+
+    i++;
+  }
+
+  const value = values.join('\n');
+  return { value, nextIndex: i };
 }
 
 /**

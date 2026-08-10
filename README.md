@@ -121,6 +121,10 @@ on Delphi / form files).
 > Align, ownership tree and text properties parsed from the form file. Enough to
 > understand and edit layout without installing the full component set in an IDE.
 
+<p align="center">
+  <img src="media/form-layout.png" alt="Code4Delphi Form Layout Visualizer" width="720">
+</p>
+
 A three-pane webview shows the form as a **box model**:
 
 | Pane | Role |

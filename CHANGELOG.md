@@ -5,24 +5,20 @@ All notable changes to **Code4Delphi** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- **Region folding** — `{$REGION}` / `{$ENDREGION}` pairs fold correctly via the
-  custom folding provider (nested markers supported). Tagged as VS Code region
-  folds so **Fold All Regions** / **Unfold All Regions** apply. Setting:
-  `delphi.folding.regions` (default `true`).
-- **Conditional directive folding** — `{$IFDEF}` / `{$IFNDEF}` / `{$IF …}` fold
-  to the matching `{$ENDIF}` or `{$IFEND}` (nested; `{$ELSE}` stays inside one
-  fold). Setting: `delphi.folding.conditionals` (default `true`).
+## [2.0.3] — 2026-08-10
 
 ### Fixed
 
-- **Comment-aware folding** — the deprecated regex-based `folding.markers` from
-  `language-configuration.json` are removed; region/conditional folding is now
-  provider-based and skips markers inside comments and strings. Commented-out
-  `{$REGION}` / `{$IFDEF}` markers no longer create phantom folds.
+- **TStrings property values now shown in the Property Inspector.** Dotted
+  sub-properties with parenthesized (`(…)`) TStrings list values (e.g.
+  `JQDatePickerOptions.DayNamesMin.Strings = ('Mo' 'Di' …)`) were
+  previously skipped by the parser and hidden from the inspector. They are
+  now extracted, decoded, and displayed as text properties. (#4164d52)
+
+### Added
+
+- **Form Layout screenshot** embedded in the README (Form Layout Visualizer
+  section).
 
 ## [2.0.2] — 2026-08-10
 

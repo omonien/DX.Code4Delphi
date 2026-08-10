@@ -593,6 +593,63 @@ end
   });
 });
 
+describe('TStrings parenthesized properties', () => {
+  test('DayNamesMin.Strings TStrings list is extracted and shown in inspector', () => {
+    const text = `
+object Form1: TForm1
+  ClientWidth = 200
+  ClientHeight = 100
+  object DatePicker: TIWCGJQDatePicker
+    Left = 8
+    Top = 8
+    Caption = 'Datum'
+    JQDatePickerOptions.DateFormat = 'dd.mm.yyyy'
+    JQDatePickerOptions.DayNamesMin.Strings = (
+      'Mo'
+      'Di'
+      'Mi'
+      'Do'
+      'Fr'
+      'Sa'
+      'So')
+  end
+end
+`;
+    const root = parseDfm(text);
+    const dp = findChild(root, 'DatePicker');
+    assert.ok(dp, 'DatePicker node exists');
+    assert.ok(
+      Object.prototype.hasOwnProperty.call(dp.properties, 'JQDatePickerOptions.DayNamesMin.Strings'),
+      'DayNamesMin.Strings should be stored as a property'
+    );
+
+    const props = getTextProperties(dp);
+    const dayNames = props.find((p) => p.name === 'JQDatePickerOptions.DayNamesMin.Strings');
+    assert.ok(dayNames, 'DayNamesMin.Strings should appear in text properties');
+    assert.ok(
+      dayNames.value.includes('Mo') && dayNames.value.includes('Di') && dayNames.value.includes('So'),
+      'value should contain the extracted strings'
+    );
+  });
+
+  test('JQDatePickerOptions.DateFormat simple dotted property still works', () => {
+    const text = `
+object Form1: TForm1
+  Caption = 'Test'
+  object DP: TIWCGJQDatePicker
+    JQDatePickerOptions.DateFormat = 'dd.mm.yyyy'
+  end
+end
+`;
+    const root = parseDfm(text);
+    const dp = findChild(root, 'DP');
+    const props = getTextProperties(dp);
+    const dateFmt = props.find((p) => p.name === 'JQDatePickerOptions.DateFormat');
+    assert.ok(dateFmt);
+    assert.equal(dateFmt.value, 'dd.mm.yyyy');
+  });
+});
+
 describe('DFM #xyz character encoding', () => {
   test('parser decodes #xyz values into readable text', () => {
     const root = parseDfm(fixture('DfmEncoding.dfm'));

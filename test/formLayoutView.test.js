@@ -310,6 +310,71 @@ end
     });
   });
 
+  test('dotted sub-properties appear in bootProps (property inspector)', () => {
+    const view = openView(`
+object DottedForm: TDottedForm
+  Left = 0
+  Top = 0
+  ClientWidth = 400
+  ClientHeight = 300
+  Caption = 'Test'
+  object DatePicker: TIWCGJQDatePicker
+    Left = 208
+    Top = 6
+    Width = 185
+    Height = 48
+    Caption = 'aktuelles Datum:'
+    JQDatePickerOptions.DateFormat = 'dd.mm.yyyy'
+    JQDatePickerOptions.DayNamesMin.Strings = (
+      'Mo'
+      'Di'
+      'Mi'
+      'Do'
+      'Fr'
+      'Sa'
+      'So')
+  end
+end
+`);
+    const html = view.panel.webview.html;
+
+    var propsStart = html.indexOf('const bootProps = ') + 18;
+    var propsEnd = html.indexOf(';\n', propsStart);
+    if (propsEnd === -1) propsEnd = html.indexOf(';', propsStart);
+    var propsJson = html.slice(propsStart, propsEnd);
+    const propsMap = JSON.parse(propsJson);
+
+    const ids = Object.keys(propsMap);
+    const dpId = ids.find((id) => id.includes('DatePicker'));
+    assert.ok(dpId, 'DatePicker node should have an entry in propertiesMap');
+
+    const props = propsMap[dpId];
+    const dateFmt = props.find((p) => p.name === 'JQDatePickerOptions.DateFormat');
+    assert.ok(dateFmt, 'JQDatePickerOptions.DateFormat should appear in inspector properties');
+    assert.equal(dateFmt.value, 'dd.mm.yyyy');
+
+    // Multi-line parenthesized TStrings values are now extracted
+    const dayNames = props.find((p) => p.name === 'JQDatePickerOptions.DayNamesMin.Strings');
+    assert.ok(dayNames, 'JQDatePickerOptions.DayNamesMin.Strings should now appear (TStrings extracted)');
+    assert.ok(dayNames.value.includes('Mo'), 'value should contain extracted strings');
+  });
+
+  test('dotted sub-property in bootProps survives embedJson escaping', () => {
+    const view = openView(`
+object Form: TForm
+  Caption = 'X'
+  JQDatePickerOptions.DateFormat = 'dd.mm.yyyy'
+end
+`);
+    const html = view.panel.webview.html;
+
+    // Property name must appear literally in the serialized propsMap
+    assert.ok(
+      html.includes('JQDatePickerOptions.DateFormat'),
+      'dotted property name should survive JSON serialization + embedJson'
+    );
+  });
+
   test('setProp encodes newlines as #13#10 in string properties', async () => {
     const view = openView(`
 object Form1: TForm1
