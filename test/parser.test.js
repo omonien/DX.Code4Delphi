@@ -401,3 +401,157 @@ test('empty input and no-section input are safe', () => {
   assert.equal(noSections.sections.interface, -1);
   assert.equal(noSections.sections.implementation, -1);
 });
+
+test('computeFoldRegions produces region folds for {$REGION} / {$ENDREGION}', () => {
+  const src = fixture('RegionsTest.pas');
+  const regions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: true });
+  assert.ok(regions.length >= 12, `expected >= 12 region folds, got ${regions.length}`);
+  for (const [s, e] of regions) {
+    assert.ok(s < e, `fold start ${s} must be before end ${e}`);
+  }
+});
+
+test('computeFoldRegions nests {$REGION} pairs correctly', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    "{$REGION 'Outer'}",
+    "{$REGION 'Inner'}",
+    'procedure Foo;',
+    '{$ENDREGION}',
+    '{$ENDREGION}',
+    'implementation',
+    'end.',
+  ].join('\n');
+  const regions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: true });
+  assert.equal(regions.length, 2);
+  const outer = regions.find(([, e]) => e === 6); // ends at outer ENDREGION
+  assert.ok(outer, 'outer region must be found');
+  assert.equal(outer[0], 2, 'outer region starts at line 2');
+});
+
+test('unmatched {$REGION} / {$ENDREGION} are ignored', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    "{$REGION 'Alone'}",
+    'procedure Foo;',
+    'implementation',
+    '{$ENDREGION}',
+    "{$REGION 'Another'}",
+    'procedure Bar;',
+    'end.',
+  ].join('\n');
+  const regions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: true });
+  // Alone REGION + Another REGION -> first matched with line 5 ENDREGION, second unmatched
+  assert.equal(regions.length, 1, 'only one complete pair should exist');
+  assert.equal(regions[0][0], 2);
+  assert.equal(regions[0][1], 5);
+});
+
+test('region folding disabled when regions option is false', () => {
+  const src = fixture('RegionsTest.pas');
+  const withRegions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: true });
+  const withoutRegions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: false });
+  assert.ok(withRegions.length > 0, 'region folds must exist when enabled');
+  assert.equal(withoutRegions.length, 0, 'no region folds when disabled');
+});
+
+test('computeFoldRegions folds {$IFDEF} / {$IFNDEF} / {$IF} compiler directives', () => {
+  const src = fixture('RegionsTest.pas');
+  const regions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: false, conditionals: true });
+  assert.ok(regions.length >= 5, `expected >= 5 conditional folds, got ${regions.length}`);
+  for (const [s, e] of regions) {
+    assert.ok(s < e, `fold start ${s} must be before end ${e}`);
+  }
+});
+
+test('conditionals: nested {$IFDEF} stacks correctly', () => {
+  const src = [
+    'unit U;',
+    '{$IFDEF A}',
+    'procedure Foo;',
+    '{$IFDEF B}',
+    'procedure Bar;',
+    '{$ENDIF}',
+    '{$ENDIF}',
+    'end.',
+  ].join('\n');
+  const regions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: false, conditionals: true });
+  assert.equal(regions.length, 2);
+  assert.ok(regions.some(([s, e]) => s === 1 && e === 6), 'outer IFDEF A must fold to line 6');
+  assert.ok(regions.some(([s, e]) => s === 3 && e === 5), 'inner IFDEF B must fold to line 5');
+});
+
+test('conditionals: {$IFDEF} with {$ELSE} is one fold', () => {
+  const src = [
+    'unit U;',
+    '{$IFDEF WIN32}',
+    'procedure Win;',
+    '{$ELSE}',
+    'procedure Other;',
+    '{$ENDIF}',
+    'end.',
+  ].join('\n');
+  const regions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: false, conditionals: true });
+  assert.equal(regions.length, 1);
+  assert.equal(regions[0][0], 1);
+  assert.equal(regions[0][1], 5);
+});
+
+test('conditionals: {$IF ...} terminates at {$IFEND}', () => {
+  const src = [
+    'unit U;',
+    '{$IF RTLVersion >= 36}',
+    'procedure Modern;',
+    '{$IFEND}',
+    'end.',
+  ].join('\n');
+  const regions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: false, conditionals: true });
+  assert.equal(regions.length, 1);
+  assert.equal(regions[0][0], 1);
+  assert.equal(regions[0][1], 3);
+});
+
+test('conditionals: unmatched {$IFDEF} without {$ENDIF} is ignored', () => {
+  const src = [
+    'unit U;',
+    '{$IFDEF A}',
+    'procedure Foo;',
+    '{$IFDEF B}',
+    'procedure Bar;',
+    '{$ENDIF}',
+    'end.',
+  ].join('\n');
+  const regions = computeFoldRegions(src, { sections: false, beginEnd: false, regions: false, conditionals: true });
+  assert.equal(regions.length, 1);
+  assert.equal(regions[0][0], 3);
+  assert.equal(regions[0][1], 5);
+});
+
+test('conditionals: regions and conditionals combine without overlap errors', () => {
+  const src = [
+    'unit U;',
+    "{$REGION 'Outer'}",
+    '{$IFDEF A}',
+    'procedure Foo;',
+    '{$ENDIF}',
+    '{$ENDREGION}',
+    'end.',
+  ].join('\n');
+  const all = computeFoldRegions(src, { sections: false, beginEnd: false, regions: true, conditionals: true });
+  assert.equal(all.length, 2);
+  assert.ok(all.some(([s, e]) => s === 1 && e === 5), 'region fold');
+  assert.ok(all.some(([s, e]) => s === 2 && e === 4), 'conditional fold');
+  for (let i = 1; i < all.length; i++) {
+    assert.ok(all[i][0] >= all[i - 1][0], 'folds must be sorted by start line');
+  }
+});
+
+test('conditional folding disabled when conditionals option is false', () => {
+  const src = fixture('RegionsTest.pas');
+  const withCond = computeFoldRegions(src, { sections: false, beginEnd: false, regions: false, conditionals: true });
+  const withoutCond = computeFoldRegions(src, { sections: false, beginEnd: false, regions: false, conditionals: false });
+  assert.ok(withCond.length > 0, 'conditional folds must exist when enabled');
+  assert.equal(withoutCond.length, 0, 'no conditional folds when disabled');
+});

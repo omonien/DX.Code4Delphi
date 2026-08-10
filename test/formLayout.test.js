@@ -90,6 +90,32 @@ describe('formLayout parser', () => {
     assert.equal(btn.bounds.width, 80);
   });
 
+  test('parses ComplexDfm.dfm hierarchy with inherited/inline', () => {
+    const root = parseDfm(fixture('ComplexDfm.dfm'));
+    assert.ok(root);
+    assert.equal(root.name, 'ComplexForm');
+    assert.equal(root.kind, 'inherited');
+    assert.ok(findChild(root, 'LeftPanel'));
+    assert.ok(findChild(root, 'CenterPanel'));
+    const center = findChild(root, 'CenterPanel');
+    assert.ok(findChild(center, 'OkButton'));
+    assert.equal(findChild(center, 'OkButton').kind, 'inherited');
+    assert.ok(findChild(center, 'DetailsFrame'));
+    assert.equal(findChild(center, 'DetailsFrame').kind, 'inline');
+  });
+
+  test('parses ComplexFmx.fmx with FMX-only Align values', () => {
+    const root = parseDfm(fixture('ComplexFmx.fmx'));
+    assert.ok(root);
+    assert.equal(root.name, 'ComplexFmxForm');
+    assert.ok(findChild(root, 'MainToolBar'));
+    assert.equal(findChild(root, 'MainToolBar').align, 'Top');
+    assert.ok(findChild(root, 'SideBar'));
+    assert.equal(findChild(root, 'SideBar').align, 'MostLeft');
+    assert.ok(findChild(root, 'ContentArea'));
+    assert.equal(findChild(root, 'ContentArea').align, 'Client');
+  });
+
   test('normalizes VCL alXxx Align prefixes', () => {
     const root = parseDfm(fixture('SimpleVcl.dfm'));
     assert.equal(findChild(root, 'PanelTop').align, 'Top');

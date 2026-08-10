@@ -28,6 +28,22 @@ test('form grammar tokenizes SimpleFmx.fmx without errors', async () => {
   }
 });
 
+test('form grammar tokenizes ComplexDfm.dfm without errors', async () => {
+  const tokens = await tokenize(fixture('ComplexDfm.dfm'), FORM);
+  assert.ok(tokens.length > 200);
+  for (const t of tokens) {
+    assert.equal(t.scopes[0], 'source.delphi-form');
+  }
+});
+
+test('form grammar tokenizes ComplexFmx.fmx without errors', async () => {
+  const tokens = await tokenize(fixture('ComplexFmx.fmx'), FORM);
+  assert.ok(tokens.length > 200);
+  for (const t of tokens) {
+    assert.equal(t.scopes[0], 'source.delphi-form');
+  }
+});
+
 test('object / end / inherited / inline are keywords', async () => {
   const s = [
     'object Form1: TForm1',

@@ -10,15 +10,17 @@ class DelphiFoldingProvider {
     const regions = computeFoldRegions(document.getText(), {
       sections: cfg.sections,
       beginEnd: cfg.beginEnd,
+      regions: cfg.regions,
+      conditionals: cfg.conditionals,
     });
     return regions.map(([start, end]) => {
-      const isSection = cfg.sections && start >= 0 && /^(interface|implementation|initialization|finalization)\b/.test(
-        document.lineAt(start).text.trimStart()
-      );
+      const head = start >= 0 ? document.lineAt(start).text.trimStart() : '';
+      const isSection = cfg.sections && /^(interface|implementation|initialization|finalization)\b/i.test(head);
+      const isRegionMarker = cfg.regions && /^\{\$region\b/i.test(head);
       return new vscode.FoldingRange(
         start,
         end,
-        isSection ? vscode.FoldingRangeKind.Region : undefined
+        (isSection || isRegionMarker) ? vscode.FoldingRangeKind.Region : undefined
       );
     });
   }

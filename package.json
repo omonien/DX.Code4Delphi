@@ -291,6 +291,16 @@
           "default": true,
           "description": "Provide fold regions for begin/end, case, try, record and class blocks."
         },
+        "delphi.folding.regions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Provide fold regions for {$REGION} / {$ENDREGION} markers."
+        },
+        "delphi.folding.conditionals": {
+          "type": "boolean",
+          "default": true,
+          "description": "Provide fold regions for {$IFDEF}, {$IF}, {$IFNDEF} / {$ENDIF}, {$IFEND} compiler directives."
+        },
         "delphi.formLayout.labels.showName": {
           "type": "boolean",
           "default": true,

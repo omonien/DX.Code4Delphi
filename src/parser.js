@@ -581,6 +581,38 @@ function computeFoldRegions(text, opts) {
     }
   }
 
+  if (opts.regions) {
+    const lines = text.split('\n');
+    const stack = [];
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trimStart();
+      if (/^\{\$region\b/i.test(trimmed)) {
+        stack.push(i);
+      } else if (/^\{\$endregion\b/i.test(trimmed)) {
+        if (stack.length > 0) {
+          const start = stack.pop();
+          if (i > start) regions.push([start, i]);
+        }
+      }
+    }
+  }
+
+  if (opts.conditionals) {
+    const lines = text.split('\n');
+    const stack = [];
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trimStart();
+      if (/^\{\$(ifdef|ifndef|if\s)/i.test(trimmed)) {
+        stack.push(i);
+      } else if (/^\{\$(endif|ifend)\b/i.test(trimmed)) {
+        if (stack.length > 0) {
+          const start = stack.pop();
+          if (i > start) regions.push([start, i]);
+        }
+      }
+    }
+  }
+
   regions.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   return regions;
 }

@@ -1,0 +1,465 @@
+object ComplexFmxForm: TComplexFmxForm
+  Position.X = 200.000000000000000000
+  Position.Y = 100.000000000000000000
+  Caption = 'FMX '#220'bersicht & Test-'#228'Formular'
+  ClientHeight = 640.000000000000000000
+  ClientWidth = 1024.000000000000000000
+  Fill.Color = $FF1A1A2E
+  Fill.Kind = Solid
+  FormFactor.Width = 1024.000000000000000000
+  FormFactor.Height = 768.000000000000000000
+  FormFactor.Devices = [Desktop, Phone, Tablet]
+  DesignerMasterStyle = 0
+  Size.Width = 1024.000000000000000000
+  Size.Height = 768.000000000000000000
+  Size.PlatformDefault = False
+  BorderStyle = Sizeable
+  FullScreen = False
+  SystemStatusBar.BackgroundColor = $FF16213E
+  SystemStatusBar.Visible = True
+  Title = 'FMX Complex Test'
+  Transparent = False
+  // Haupt-Toolbar (FMX: Align = Top, kein al-Präfix)
+  object MainToolBar: TToolBar
+    Align = Top
+    Height = 48.000000000000000000
+    Position.X = 0.000000000000000000
+    Position.Y = 0.000000000000000000
+    Size.Width = 1024.000000000000000000
+    Size.Height = 48.000000000000000000
+    Size.PlatformDefault = False
+    StyleLookup = 'toolbarstyle'
+    object TitleLabel: TLabel
+      Align = MostLeft
+      Height = 48.000000000000000000
+      Margins.Left = 12.000000000000000000
+      Margins.Top = 0.000000000000000000
+      Margins.Right = 0.000000000000000000
+      Margins.Bottom = 0.000000000000000000
+      Position.X = 12.000000000000000000
+      Position.Y = 0.000000000000000000
+      Size.Width = 300.000000000000000000
+      Size.Height = 48.000000000000000000
+      Size.PlatformDefault = False
+      StyledSettings = [Family, Size, Style]
+      Text = 'FMX Komplextest'
+      TextSettings.Font.Size = 16.000000000000000000
+      TextSettings.Font.Style = [Bold]
+      TextSettings.FontColor = $FFFFFFFF
+      TextSettings.HorzAlign = Leading
+      TextSettings.Trimming = Character
+      TextSettings.VertAlign = Center
+      TextSettings.WordWrap = False
+      TouchTargetExpansion.Bottom = 4.000000000000000000
+      TouchTargetExpansion.Left = 4.000000000000000000
+      TouchTargetExpansion.Right = 4.000000000000000000
+      TouchTargetExpansion.Top = 4.000000000000000000
+    end
+    // SpeedButton mit allen FMX-typischen Properties
+    object SettingsBtn: TSpeedButton
+      Align = MostRight
+      CanFocus = True
+      DisableFocusEffect = True
+      Enabled = True
+      Height = 32.000000000000000000
+      HitTest = True
+      Margins.Left = 4.000000000000000000
+      Margins.Top = 8.000000000000000000
+      Margins.Right = 12.000000000000000000
+      Margins.Bottom = 8.000000000000000000
+      Opacity = 0.950000002980232239
+      Position.X = 880.000000000000000000
+      Position.Y = 8.000000000000000000
+      RotationAngle = 0.000000000000000000
+      RotationCenter.X = 0.500000000000000000
+      RotationCenter.Y = 0.500000000000000000
+      Scale.X = 1.000000000000000000
+      Scale.Y = 1.000000000000000000
+      Size.Width = 132.000000000000000000
+      Size.Height = 32.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'speedbuttonstyle'
+      TabOrder = 0
+      Text = 'Einstellungen '#8226
+      TextSettings.Font.Size = 12.000000000000000000
+      TextSettings.Font.Style = []
+      TextSettings.FontColor = $FFFFFFFF
+      Trimming = Character
+      WordWrap = False
+    end
+  end
+  // Statuszeile (unten) – FMX: Align = Bottom
+  object StatusBar1: TStatusBar
+    Align = Bottom
+    Height = 22.000000000000000000
+    Position.X = 0.000000000000000000
+    Position.Y = 618.000000000000000000
+    Size.Width = 1024.000000000000000000
+    Size.Height = 22.000000000000000000
+    Size.PlatformDefault = False
+    StyleLookup = 'statusbarstyle'
+    object StatusLabel: TLabel
+      Align = Contents
+      Height = 22.000000000000000000
+      Margins.Left = 8.000000000000000000
+      Margins.Top = 2.000000000000000000
+      Margins.Right = 8.000000000000000000
+      Margins.Bottom = 2.000000000000000000
+      Position.X = 8.000000000000000000
+      Position.Y = 2.000000000000000000
+      Size.Width = 1008.000000000000000000
+      Size.Height = 18.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'Status: Bereit | '#220'sicht: '#228' aktiv'
+      TextSettings.HorzAlign = Leading
+      TextSettings.VertAlign = Center
+    end
+  end
+  // Linke Sidebar – MostLeft-Align
+  object SideBar: TLayout
+    Align = MostLeft
+    ClipChildren = True
+    ClipParent = False
+    Height = 570.000000000000000000
+    HitTest = True
+    Margins.Left = 0.000000000000000000
+    Margins.Top = 48.000000000000000000
+    Margins.Right = 0.000000000000000000
+    Margins.Bottom = 0.000000000000000000
+    Opacity = 1.000000000000000000
+    Padding.Bottom = 8.000000000000000000
+    Padding.Left = 8.000000000000000000
+    Padding.Right = 8.000000000000000000
+    Padding.Top = 8.000000000000000000
+    Position.X = 0.000000000000000000
+    Position.Y = 48.000000000000000000
+    RotationAngle = 0.000000000000000000
+    Size.Width = 240.000000000000000000
+    Size.Height = 570.000000000000000000
+    Size.PlatformDefault = False
+    StyleLookup = 'sidebarstyle'
+    Visible = True
+    object NavList: TListBox
+      Align = Client
+      CanFocus = True
+      DisableFocusEffect = False
+      Height = 554.000000000000000000
+      HitTest = True
+      ItemHeight = 44.000000000000000000
+      Margins.Left = 0.000000000000000000
+      Margins.Top = 0.000000000000000000
+      Margins.Right = 0.000000000000000000
+      Margins.Bottom = 0.000000000000000000
+      Padding.Left = 0.000000000000000000
+      Padding.Right = 0.000000000000000000
+      Padding.Top = 8.000000000000000000
+      Position.X = 8.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 224.000000000000000000
+      Size.Height = 554.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'listboxstyle'
+      TabOrder = 0
+      // FMX ListBox-Einträge
+      object NavHome: TListBoxItem
+        Height = 48.000000000000000000
+        HitTest = True
+        IsChecked = False
+        IsSelected = True
+        Position.X = 0.000000000000000000
+        Position.Y = 8.000000000000000000
+        Scale.X = 1.000000000000000000
+        Scale.Y = 1.000000000000000000
+        Size.Width = 224.000000000000000000
+        Size.Height = 48.000000000000000000
+        Size.PlatformDefault = False
+        StyleLookup = 'listboxitemstyle'
+        Text = #214'bersicht'
+        TextSettings.HorzAlign = Leading
+        TextSettings.VertAlign = Center
+        WordWrap = False
+      end
+      object NavDetails: TListBoxItem
+        Height = 48.000000000000000000
+        HitTest = True
+        IsChecked = False
+        IsSelected = False
+        Position.X = 0.000000000000000000
+        Position.Y = 56.000000000000000000
+        Size.Width = 224.000000000000000000
+        Size.Height = 48.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Details '#228'ndern'
+        TextSettings.HorzAlign = Leading
+        TextSettings.VertAlign = Center
+      end
+      object NavReports: TListBoxItem
+        Height = 48.000000000000000000
+        HitTest = True
+        IsChecked = False
+        IsSelected = False
+        Position.X = 0.000000000000000000
+        Position.Y = 104.000000000000000000
+        Size.Width = 224.000000000000000000
+        Size.Height = 48.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Berichte & Export'
+        TextSettings.HorzAlign = Leading
+        TextSettings.VertAlign = Center
+      end
+      object NavSettings: TListBoxItem
+        Height = 48.000000000000000000
+        HitTest = True
+        IsChecked = False
+        IsSelected = False
+        Position.X = 0.000000000000000000
+        Position.Y = 152.000000000000000000
+        Size.Width = 224.000000000000000000
+        Size.Height = 48.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Konfiguration'
+        TextSettings.HorzAlign = Leading
+        TextSettings.VertAlign = Center
+      end
+    end
+  end
+  // Client-Bereich (Hauptinhalt) – Center-Align (VCL: alClient)
+  object ContentArea: TLayout
+    Align = Client
+    ClipChildren = True
+    Height = 570.000000000000000000
+    Margins.Left = 0.000000000000000000
+    Margins.Top = 48.000000000000000000
+    Margins.Right = 0.000000000000000000
+    Margins.Bottom = 22.000000000000000000
+    Padding.Bottom = 16.000000000000000000
+    Padding.Left = 16.000000000000000000
+    Padding.Right = 16.000000000000000000
+    Padding.Top = 16.000000000000000000
+    Position.X = 240.000000000000000000
+    Position.Y = 48.000000000000000000
+    Size.Width = 784.000000000000000000
+    Size.Height = 570.000000000000000000
+    Size.PlatformDefault = False
+    object ContentTabs: TTabControl
+      Align = Client
+      Height = 538.000000000000000000
+      Position.X = 16.000000000000000000
+      Position.Y = 16.000000000000000000
+      Size.Width = 752.000000000000000000
+      Size.Height = 538.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'tabcontrolstyle'
+      TabHeight = 32.000000000000000000
+      TabIndex = 0
+      TabPosition = Top
+      TabWidth = 120.000000000000000000
+      Touch.GestureManager = GestureManager1
+      object TabForm: TTabItem
+        CustomIcon = <>
+        Height = 505.000000000000000000
+        IsSelected = True
+        Position.X = 0.000000000000000000
+        Position.Y = 32.000000000000000000
+        Size.Width = 752.000000000000000000
+        Size.Height = 505.000000000000000000
+        Size.PlatformDefault = False
+        StyleLookup = 'tabitemstyle'
+        Text = 'Formular'
+        // FMX: Scale-Align für responsive Inhalte
+        object FormScrollBox: TVertScrollBox
+          Align = Client
+          Height = 505.000000000000000000
+          Position.X = 0.000000000000000000
+          Position.Y = 32.000000000000000000
+          Size.Width = 752.000000000000000000
+          Size.Height = 505.000000000000000000
+          Size.PlatformDefault = False
+          object InputLayout: TLayout
+            Align = Scale
+            Height = 400.000000000000000000
+            Position.X = 0.000000000000000000
+            Position.Y = 0.000000000000000000
+            Size.Width = 752.000000000000000000
+            Size.Height = 400.000000000000000000
+            Size.PlatformDefault = False
+            // FMX: VertCenter + HorzCenter kombinierbar
+            object NameEdit: TEdit
+              Align = HorzCenter
+              Height = 32.000000000000000000
+              KeyboardType = Default
+              Margins.Left = 0.000000000000000000
+              Margins.Top = 20.000000000000000000
+              Margins.Right = 0.000000000000000000
+              Margins.Bottom = 0.000000000000000000
+              Password = False
+              Position.X = 76.000000000000000000
+              Position.Y = 20.000000000000000000
+              ReadOnly = False
+              ReturnKeyType = Next
+              Size.Width = 600.000000000000000000
+              Size.Height = 32.000000000000000000
+              Size.PlatformDefault = False
+              StyleLookup = 'editstyle'
+              Text = ''
+              TextPrompt = 'Vollst'#228'ndiger Name'
+              TextSettings.HorzAlign = Leading
+              TextSettings.VertAlign = Center
+              Touch.KeyboardType = Default
+              Touch.TargetExpansion = True
+            end
+            object MailEdit: TEdit
+              Align = HorzCenter
+              Height = 32.000000000000000000
+              KeyboardType = EmailAddress
+              Margins.Top = 12.000000000000000000
+              Position.X = 76.000000000000000000
+              Position.Y = 64.000000000000000000
+              Size.Width = 600.000000000000000000
+              Size.Height = 32.000000000000000000
+              Size.PlatformDefault = False
+              Text = ''
+              TextPrompt = 'E-Mail-Adresse'
+              TextSettings.HorzAlign = Leading
+            end
+            object SaveBtn: TButton
+              Align = MostRight
+              Anchors = [akRight, akBottom]
+              CanFocus = True
+              Default = True
+              DisableFocusEffect = False
+              Height = 44.000000000000000000
+              Margins.Left = 8.000000000000000000
+              Margins.Top = 24.000000000000000000
+              Margins.Right = 8.000000000000000000
+              Margins.Bottom = 0.000000000000000000
+              Position.X = 536.000000000000000000
+              Position.Y = 108.000000000000000000
+              Size.Width = 140.000000000000000000
+              Size.Height = 44.000000000000000000
+              Size.PlatformDefault = False
+              StyleLookup = 'buttonstyle'
+              Text = 'Speichern'
+              TextSettings.Font.Style = [Bold]
+              TextSettings.FontColor = $FFFFFFFF
+            end
+            object CancelBtn: TButton
+              Align = MostRight
+              CanFocus = True
+              Height = 44.000000000000000000
+              Margins.Left = 8.000000000000000000
+              Margins.Top = 24.000000000000000000
+              Margins.Right = 0.000000000000000000
+              Margins.Bottom = 0.000000000000000000
+              Position.X = 388.000000000000000000
+              Position.Y = 108.000000000000000000
+              Size.Width = 140.000000000000000000
+              Size.Height = 44.000000000000000000
+              Size.PlatformDefault = False
+              StyleLookup = 'buttonstyle'
+              Text = 'Abbrechen'
+            end
+          end
+        end
+      end
+      object TabVisual: TTabItem
+        CustomIcon = <>
+        Height = 505.000000000000000000
+        IsSelected = False
+        Position.X = 0.000000000000000000
+        Position.Y = 32.000000000000000000
+        Size.Width = 752.000000000000000000
+        Size.Height = 505.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Visual'
+        object ImagePanel: TLayout
+          Align = Client
+          Height = 505.000000000000000000
+          Position.X = 0.000000000000000000
+          Position.Y = 32.000000000000000000
+          Size.Width = 752.000000000000000000
+          Size.Height = 505.000000000000000000
+          Size.PlatformDefault = False
+          object PreviewImg: TImage
+            Align = Fit
+            Height = 400.000000000000000000
+            HitTest = False
+            Margins.Left = 20.000000000000000000
+            Margins.Top = 20.000000000000000000
+            Margins.Right = 20.000000000000000000
+            Margins.Bottom = 20.000000000000000000
+            Opacity = 0.899999976158142090
+            Position.X = 20.000000000000000000
+            Position.Y = 20.000000000000000000
+            Size.Width = 712.000000000000000000
+            Size.Height = 465.000000000000000000
+            Size.PlatformDefault = False
+            WrapMode = Fit
+            Bitmap = {
+              89504E470D0A1A0A0000000D494844520000001000000010080200000024A5
+              6F0C000000017352474200AECE1CE90000000467414D410000B18F0BFC6105
+              0000007C49444154384F8DD0C10DC2300C04D03B498FC82A1D400624BB30A4
+              C280D0881158813BA921B10049F3C90D10E9233F5BB27D77519A32BC1ED2D7
+              599DB9C9F9268DBD3BCA3E2BA06C4A923A6C06A4FE9949BD42C753F3E530FC
+              F06FA86BDFB6E917B4B2AF1EE7233C47FAF399C7DF017E7C031580393A05D0
+              20960000000049454E44AE426082}
+          end
+        end
+      end
+    end
+  end
+  // GestureManager (unsichtbar, FMX-spezifisch)
+  object GestureManager1: TGestureManager
+    Sensitivity = 56.000000000000000000
+    Left = 900.000000000000000000
+    Top = 600.000000000000000000
+  end
+  // FMX StyleBook
+  object StyleBook1: TStyleBook
+    FileName = 'ComplexStyle.style'
+    Left = 940.000000000000000000
+    Top = 600.000000000000000000
+    Resources = <
+      item
+        ResourcesBin = {
+          544653310000000000000000000000000000000000000000000000000000
+          000000000000000000000000000000000000000000000000000000000000}
+      end>
+  end
+  // FMX ActionList
+  object ActionList1: TActionList
+    Left = 860.000000000000000000
+    Top = 600.000000000000000000
+    object SaveAction: TAction
+      Category = 'Daten'
+      Text = 'Speichern'
+      Hint = 'Daten speichern'
+      ShortCut = 16467
+    end
+    object DeleteAction: TAction
+      Category = 'Daten'
+      Text = 'L'#246'schen'
+      Hint = 'Datensatz l'#246'schen'
+      ShortCut = 16452
+    end
+  end
+  // FMX Popup (wird zum Formular-Lebenszyklus generiert)
+  object ContextPopup: TPopup
+    PlacementTarget = ContentArea
+    Placement = Bottom
+    object PopupEdit: TMenuItem
+      Text = 'Bearbeiten'
+    end
+    object PopupDelete: TMenuItem
+      Text = 'L'#246'schen'
+    end
+    object PopupDivider: TMenuItem
+      Text = '-'
+      StyleLookup = 'menuseparatorstyle'
+    end
+    object PopupInfo: TMenuItem
+      Text = 'Information'
+      IsChecked = True
+    end
+  end
+end

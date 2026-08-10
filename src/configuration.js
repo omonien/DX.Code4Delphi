@@ -21,6 +21,8 @@ function getConfig() {
     folding: {
       sections: cfg.get('folding.sections', true),
       beginEnd: cfg.get('folding.beginEnd', true),
+      regions: cfg.get('folding.regions', true),
+      conditionals: cfg.get('folding.conditionals', true),
     },
     formLayout: {
       labels: {
