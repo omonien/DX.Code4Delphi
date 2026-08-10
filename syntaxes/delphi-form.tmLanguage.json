@@ -1,0 +1,187 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Delphi Form",
+  "scopeName": "source.delphi-form",
+  "fileTypes": ["dfm", "fmx"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#object-header" },
+    { "include": "#structure-keywords" },
+    { "include": "#property-assignment" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#constants" },
+    { "include": "#set-or-list" },
+    { "include": "#binary-block" },
+    { "include": "#collection" },
+    { "include": "#identifiers" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "//[^\\n]*",
+          "name": "comment.line.double-slash.delphi"
+        },
+        {
+          "begin": "\\(\\*",
+          "end": "\\*\\)",
+          "name": "comment.block.pascal.delphi"
+        }
+      ]
+    },
+    "object-header": {
+      "match": "(?i)^\\s*(object|inherited|inline)(?:\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_.]*))?)?(?:\\s*(\\[)(\\d+)(\\]))?",
+      "captures": {
+        "1": { "name": "keyword.control.delphi" },
+        "2": { "name": "entity.name.type.delphi" },
+        "3": { "name": "punctuation.separator.type.delphi" },
+        "4": { "name": "entity.name.type.delphi" },
+        "5": { "name": "punctuation.definition.delphi" },
+        "6": { "name": "constant.numeric.integer.delphi" },
+        "7": { "name": "punctuation.definition.delphi" }
+      }
+    },
+    "structure-keywords": {
+      "match": "(?i)\\b(end|item)\\b",
+      "name": "keyword.control.delphi"
+    },
+    "property-assignment": {
+      "match": "^(\\s*)([A-Za-z_][A-Za-z0-9_.]*)(\\s*)(=)",
+      "captures": {
+        "2": { "name": "entity.name.variable.property.delphi" },
+        "4": { "name": "keyword.operator.assignment.delphi" }
+      }
+    },
+    "strings": {
+      "patterns": [
+        {
+          "match": "(?:'(?:''|[^'])*'|#\\$[0-9A-Fa-f]+|#[0-9]+)+",
+          "name": "string.quoted.single.delphi"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\$[0-9A-Fa-f_]+",
+          "name": "constant.numeric.hex.delphi"
+        },
+        {
+          "match": "-?\\b\\d[\\d_]*\\.\\d[\\d_]*(?:[eE][+-]?\\d+)?",
+          "name": "constant.numeric.float.delphi"
+        },
+        {
+          "match": "-?\\b\\d[\\d_]*\\b",
+          "name": "constant.numeric.integer.delphi"
+        }
+      ]
+    },
+    "constants": {
+      "match": "(?i)\\b(True|False|nil)\\b",
+      "name": "constant.language.delphi"
+    },
+    "set-or-list": {
+      "patterns": [
+        {
+          "begin": "\\[",
+          "end": "\\]",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.delphi" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.delphi" }
+          },
+          "patterns": [
+            { "include": "#strings" },
+            { "include": "#numbers" },
+            { "include": "#constants" },
+            {
+              "match": "[A-Za-z_][A-Za-z0-9_.]*",
+              "name": "variable.other.delphi"
+            },
+            {
+              "match": ",",
+              "name": "punctuation.separator.delphi"
+            }
+          ]
+        },
+        {
+          "begin": "\\(",
+          "end": "\\)",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.delphi" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.delphi" }
+          },
+          "patterns": [
+            { "include": "#strings" },
+            { "include": "#numbers" },
+            { "include": "#constants" },
+            {
+              "match": "[A-Za-z_][A-Za-z0-9_.]*",
+              "name": "variable.other.delphi"
+            },
+            {
+              "match": ",",
+              "name": "punctuation.separator.delphi"
+            }
+          ]
+        }
+      ]
+    },
+    "binary-block": {
+      "begin": "\\{",
+      "end": "\\}",
+      "name": "meta.embedded.binary.delphi",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.delphi" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.delphi" }
+      },
+      "patterns": [
+        {
+          "match": "[0-9A-Fa-f]+",
+          "name": "constant.numeric.hex.delphi"
+        }
+      ]
+    },
+    "collection": {
+      "begin": "(?<==\\s*)<",
+      "end": ">",
+      "name": "meta.embedded.collection.delphi",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.delphi" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.delphi" }
+      },
+      "patterns": [
+        { "include": "$self" }
+      ]
+    },
+    "identifiers": {
+      "match": "[A-Za-z_][A-Za-z0-9_.]*",
+      "name": "variable.other.delphi"
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "match": ":",
+          "name": "punctuation.separator.type.delphi"
+        },
+        {
+          "match": "[,;]",
+          "name": "punctuation.separator.delphi"
+        },
+        {
+          "match": "\\.",
+          "name": "punctuation.accessor.delphi"
+        }
+      ]
+    }
+  }
+}

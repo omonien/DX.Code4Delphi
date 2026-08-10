@@ -82,6 +82,11 @@
         "language": "delphi",
         "scopeName": "source.delphi",
         "path": "./syntaxes/delphi.tmLanguage.json"
+      },
+      {
+        "language": "delphi-form",
+        "scopeName": "source.delphi-form",
+        "path": "./syntaxes/delphi-form.tmLanguage.json"
       }
     ],
     "commands": [

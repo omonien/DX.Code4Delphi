@@ -1,7 +1,6 @@
 {
   "comments": {
-    "lineComment": "//",
-    "blockComment": ["{", "}"]
+    "lineComment": "//"
   },
   "brackets": [
     ["(", ")"],
@@ -22,5 +21,11 @@
     ["{", "}"],
     ["<", ">"],
     ["'", "'"]
-  ]
+  ],
+  "folding": {
+    "markers": {
+      "start": "^\\s*(object|inherited|inline)\\b",
+      "end": "^\\s*end\\b"
+    }
+  }
 }
