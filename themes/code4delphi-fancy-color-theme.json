@@ -23,7 +23,8 @@
     {
       "scope": [
         "keyword.operator.delphi",
-        "keyword.operator.assignment.delphi"
+        "keyword.operator.assignment.delphi",
+        "variable.other.delphi"
       ],
       "settings": {
         "foreground": "#d4d4d4"

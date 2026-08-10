@@ -37,7 +37,8 @@
         "meta.type-parameter.delphi",
         "entity.name.variable.property.delphi",
         "entity.other.attribute-name.delphi",
-        "meta.attribute.delphi"
+        "meta.attribute.delphi",
+        "variable.other.delphi"
       ],
       "settings": {
         "foreground": "#fef9f1"

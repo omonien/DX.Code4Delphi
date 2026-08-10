@@ -16,7 +16,8 @@
       "scope": [
         "keyword.operator.delphi",
         "keyword.operator.assignment.delphi",
-        "keyword.operator.range.delphi"
+        "keyword.operator.range.delphi",
+        "variable.other.delphi"
       ],
       "settings": {
         "foreground": "#ffffff"
