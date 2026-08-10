@@ -87,6 +87,11 @@
         "language": "delphi-form",
         "scopeName": "source.delphi-form",
         "path": "./syntaxes/delphi-form.tmLanguage.json"
+      },
+      {
+        "language": "delphi-form",
+        "scopeName": "source.delphi-form",
+        "path": "./syntaxes/delphi-form.tmLanguage.json"
       }
     ],
     "commands": [
@@ -316,7 +321,7 @@
   },
   "scripts": {
     "test": "node --test test/*.test.js",
-    "test:grammar": "node --test test/grammar.test.js",
+    "test:grammar": "node --test test/grammar.test.js test/grammar-form.test.js",
     "test:parser": "node --test test/parser.test.js",
     "package": "vsce package",
     "test:formLayout": "node --test test/formLayout.test.js test/formLayoutView.test.js test/treeFilter.test.js",

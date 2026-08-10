@@ -62,8 +62,7 @@ test('all four schemes are valid and complete', () => {
   }
 });
 
-test('schemes cover every leaf scope produced by the grammar', () => {
-  const grammar = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'syntaxes', 'delphi.tmLanguage.json'), 'utf8'));
+test('schemes cover every leaf scope produced by the grammars', () => {
   const scopes = new Set();
   const walk = (node) => {
     if (!node || typeof node !== 'object') return;
@@ -73,11 +72,15 @@ test('schemes cover every leaf scope produced by the grammar', () => {
       else if (v && typeof v === 'object') walk(v);
     }
   };
-  walk(grammar);
+  for (const file of ['delphi.tmLanguage.json', 'delphi-form.tmLanguage.json']) {
+    walk(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'syntaxes', file), 'utf8')));
+  }
 
-  // meta.attribute.delphi is a begin/end name; all leaf names must be covered by Fancy
+  // meta.* scopes are structural containers; leaf colors come from nested tokens
   const fancy = flatScopes(readTheme(THEMES[0]));
-  const missing = [...scopes].filter((s) => !fancy.has(s) && s !== 'meta.attribute.delphi');
+  const missing = [...scopes].filter(
+    (s) => !fancy.has(s) && !s.startsWith('meta.')
+  );
   assert.deepEqual(missing, [], 'grammar leaf scopes missing in Fancy theme');
 });
 

@@ -23,6 +23,10 @@ function getRegistry() {
             const grammarPath = path.join(__dirname, '..', '..', 'syntaxes', 'delphi.tmLanguage.json');
             return parseRawGrammar(fs.readFileSync(grammarPath, 'utf8'), 'delphi.tmLanguage.json');
           }
+          if (scopeName === 'source.delphi-form') {
+            const grammarPath = path.join(__dirname, '..', '..', 'syntaxes', 'delphi-form.tmLanguage.json');
+            return parseRawGrammar(fs.readFileSync(grammarPath, 'utf8'), 'delphi-form.tmLanguage.json');
+          }
           return null;
         },
       });
@@ -32,12 +36,13 @@ function getRegistry() {
 }
 
 /**
- * Tokenize `source` with the Delphi grammar and return a map of
- * token text -> array of scopes (full scope path strings).
+ * Tokenize `source` with a TextMate grammar.
+ * @param {string} source
+ * @param {string} [scopeName='source.delphi']
  */
-async function tokenize(source) {
+async function tokenize(source, scopeName = 'source.delphi') {
   const registry = await getRegistry();
-  const grammar = await registry.loadGrammar('source.delphi');
+  const grammar = await registry.loadGrammar(scopeName);
   const lines = source.split('\n');
   let ruleStack = null;
   const tokens = [];
@@ -55,11 +60,13 @@ async function tokenize(source) {
 }
 
 /**
- * Return the full scope path (e.g. 'source.delphi keyword.control.delphi')
- * for the first token whose text exactly equals `text`, or null.
+ * Return the full scope path for the first token whose text exactly equals `text`, or null.
+ * @param {string} source
+ * @param {string} text
+ * @param {string} [scopeName='source.delphi']
  */
-async function scopesFor(source, text) {
-  const tokens = await tokenize(source);
+async function scopesFor(source, text, scopeName = 'source.delphi') {
+  const tokens = await tokenize(source, scopeName);
   const found = tokens.find((t) => t.text === text);
   return found ? found.scopes : null;
 }
