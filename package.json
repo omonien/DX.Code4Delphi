@@ -73,7 +73,8 @@
         "extensions": [
           ".dfm",
           ".fmx"
-        ]
+        ],
+        "configuration": "./language-configuration-form.json"
       }
     ],
     "grammars": [
