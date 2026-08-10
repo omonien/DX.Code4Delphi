@@ -2,7 +2,7 @@
   "name": "code4delphi",
   "displayName": "Code4Delphi — Delphi Language Support",
   "description": "Code4Delphi: modern, high quality syntax highlighting and Delphi-IDE style code navigation (Ctrl+Shift+Up/Down, Alt+Up/Down) for Delphi 13.1 and all older versions. By Developer Experts, LLC.",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "publisher": "DeveloperExperts",
   "author": "Developer Experts, LLC",
   "license": "MIT",
@@ -82,11 +82,6 @@
         "language": "delphi",
         "scopeName": "source.delphi",
         "path": "./syntaxes/delphi.tmLanguage.json"
-      },
-      {
-        "language": "delphi-form",
-        "scopeName": "source.delphi-form",
-        "path": "./syntaxes/delphi-form.tmLanguage.json"
       },
       {
         "language": "delphi-form",
