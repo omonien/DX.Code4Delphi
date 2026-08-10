@@ -129,10 +129,12 @@ test('comments: line, brace, paren-star, and compiler directives', async () => {
   ].join('\n');
   const line = await scopesFor(s, '// line comment');
   assert.ok(line.includes('comment.line.double-slash.delphi'), line.join(' '));
-  const brace = await scopesFor(s, '{ brace comment }');
-  assert.ok(brace.includes('comment.block.delphi'), brace.join(' '));
-  const paren = await scopesFor(s, '(* paren comment *)');
-  assert.ok(paren.includes('comment.block.pascal.delphi'), paren.join(' '));
+  const tokens = await tokenize(s);
+  const tokWith = (text) => tokens.find((t) => t.text.includes(text));
+  const brace = tokWith('brace comment');
+  assert.ok(brace && brace.scopes.includes('comment.block.delphi'), brace && brace.scopes.join(' '));
+  const paren = tokWith('paren comment');
+  assert.ok(paren && paren.scopes.includes('comment.block.pascal.delphi'), paren && paren.scopes.join(' '));
   const opening = await scopesFor(s, '{$');
   assert.ok(opening && opening.includes('meta.preprocessor.delphi'), opening && opening.join(' '));
   const ifdefKw = await scopesFor(s, 'IFDEF');
@@ -144,11 +146,53 @@ test('comments: line, brace, paren-star, and compiler directives', async () => {
 test('directives inside comments are NOT treated as keywords', async () => {
   // a keyword-like word inside a comment must not get a keyword scope
   const s = '{ this comment mentions interface and begin }';
-  const comment = await scopesFor(s, '{ this comment mentions interface and begin }');
-  assert.ok(comment.includes('comment.block.delphi'));
   const tokens = await tokenize(s);
+  const body = tokens.find((t) => t.text.includes('mentions interface'));
+  assert.ok(body && body.scopes.includes('comment.block.delphi'), body && body.scopes.join(' '));
   for (const t of tokens) {
     assert.ok(t.scopes.some((sc) => sc.startsWith('comment') || sc === 'source.delphi'));
+  }
+});
+
+test('multi-line brace comments are highlighted as comments', async () => {
+  const s = '{\n  multi-line\n  block comment\n}';
+  const tokens = await tokenize(s);
+  assert.ok(tokens.length > 0);
+  for (const t of tokens) {
+    assert.ok(
+      t.scopes.some((sc) => sc === 'comment.block.delphi'),
+      `token ${JSON.stringify(t.text)} has no comment.block.delphi scope: ${t.scopes.join(' ')}`
+    );
+  }
+});
+
+test('multi-line paren-star comments are highlighted as comments', async () => {
+  const s = '(*\n  multi-line\n  block comment\n*)';
+  const tokens = await tokenize(s);
+  assert.ok(tokens.length > 0);
+  for (const t of tokens) {
+    assert.ok(
+      t.scopes.some((sc) => sc === 'comment.block.pascal.delphi'),
+      `token ${JSON.stringify(t.text)} has no comment.block.pascal.delphi scope: ${t.scopes.join(' ')}`
+    );
+  }
+});
+
+test('unterminated brace comment swallows the rest of the file', async () => {
+  // Delphi semantics: an unclosed { comment runs to end of file
+  const s = 'A := 1;\n{ never closed\nB := 2;';
+  const tokens = await tokenize(s);
+  const openIdx = tokens.findIndex((t) => t.text.includes('{'));
+  assert.ok(openIdx >= 0, 'opening brace token must exist');
+  for (const t of tokens.slice(openIdx)) {
+    assert.ok(
+      t.scopes.some((sc) => sc.startsWith('comment.') || sc === 'source.delphi'),
+      `token ${JSON.stringify(t.text)} leaked out of the comment: ${t.scopes.join(' ')}`
+    );
+    assert.ok(
+      !t.scopes.some((sc) => sc.includes('keyword') || sc.includes('number')),
+      `token ${JSON.stringify(t.text)} got a code scope inside an open comment: ${t.scopes.join(' ')}`
+    );
   }
 });
 

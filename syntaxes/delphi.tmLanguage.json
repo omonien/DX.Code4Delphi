@@ -54,11 +54,13 @@
           "name": "comment.line.double-slash.delphi"
         },
         {
-          "match": "\\(\\*[\\s\\S]*?\\*\\)",
+          "begin": "\\(\\*",
+          "end": "\\*\\)",
           "name": "comment.block.pascal.delphi"
         },
         {
-          "match": "\\{[^$][\\s\\S]*?\\}",
+          "begin": "\\{(?=[^$])",
+          "end": "\\}",
           "name": "comment.block.delphi"
         }
       ]
