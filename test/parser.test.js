@@ -555,3 +555,52 @@ test('conditional folding disabled when conditionals option is false', () => {
   assert.ok(withCond.length > 0, 'conditional folds must exist when enabled');
   assert.equal(withoutCond.length, 0, 'no conditional folds when disabled');
 });
+
+test('maskSource keepDirectives preserves directives, blanks comments/strings', () => {
+  const src = "{$REGION 'X'}\n// line\n{ block }\nS := '{$REGION ''fake''}';";
+  const kept = maskSource(src, { keepDirectives: true });
+  assert.ok(kept.includes("{$REGION 'X'}"), 'directive must be preserved');
+  assert.ok(!kept.includes('line'), 'line comment must be blanked');
+  assert.ok(!kept.includes('block'), 'block comment must be blanked');
+  assert.ok(!kept.includes("'{$REGION"), 'string must be blanked');
+  // default behavior (legacy): directives are blanked too
+  const blanked = maskSource(src);
+  assert.ok(!blanked.includes('REGION'));
+});
+
+test('commented-out {$REGION} / {$IFDEF} markers do not produce folds', () => {
+  const src = fixture('RegionsTest.pas');
+  const lines = src.split('\n');
+  const fakeRegion = lines.findIndex((l) => l.includes("{$REGION 'Fake Region'}"));
+  const fakeIfdef = lines.findIndex((l) => l.includes('{$IFDEF FAKE_DIRECTIVE}'));
+  assert.ok(fakeRegion >= 0 && fakeIfdef >= 0, 'fixture must contain the fake markers');
+
+  const folds = computeFoldRegions(src, {
+    sections: false,
+    beginEnd: false,
+    regions: true,
+    conditionals: true,
+  });
+  assert.ok(
+    !folds.some(([s]) => s === fakeRegion || s === fakeIfdef),
+    'no fold may start inside a comment'
+  );
+});
+
+test('all comment styles in RegionsTest.pas fold nothing and keep real folds', () => {
+  const src = fixture('RegionsTest.pas');
+  const folds = computeFoldRegions(src, {
+    sections: false,
+    beginEnd: false,
+    regions: true,
+    conditionals: true,
+  });
+  // Count real markers the same way the scanner sees them (masked, directives kept):
+  // every real {$REGION} / {$IFDEF...} start must produce exactly one fold.
+  const scanText = maskSource(src, { keepDirectives: true });
+  const regionStarts = (scanText.match(/^\s*\{\$region\b/igm) || []).length;
+  const ifStarts = (scanText.match(/^\s*\{\$(ifdef|ifndef|if\s)/igm) || []).length;
+  assert.ok(regionStarts >= 20, 'fixture keeps its region coverage');
+  assert.ok(ifStarts >= 5, 'fixture keeps its conditional coverage');
+  assert.equal(folds.length, regionStarts + ifStarts, 'every real marker produces exactly one fold');
+});

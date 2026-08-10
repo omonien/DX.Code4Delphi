@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to the matching `{$ENDIF}` or `{$IFEND}` (nested; `{$ELSE}` stays inside one
   fold). Setting: `delphi.folding.conditionals` (default `true`).
 
+### Fixed
+
+- **Comment-aware folding** — the deprecated regex-based `folding.markers` from
+  `language-configuration.json` are removed; region/conditional folding is now
+  provider-based and skips markers inside comments and strings. Commented-out
+  `{$REGION}` / `{$IFDEF}` markers no longer create phantom folds.
+
 ## [2.0.2] — 2026-08-10
 
 ### Fixed

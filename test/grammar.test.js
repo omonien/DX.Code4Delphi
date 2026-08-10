@@ -379,3 +379,42 @@ test('modern Delphi 12/13 features: inline var, managed records, weak refs, mult
   assert.ok(scope('TManaged').includes('entity.name.type.delphi'), scope('TManaged'));
   assert.ok(scope("'''").includes('string.quoted.triple.delphi'), scope("'''"));
 });
+
+test('RegionsTest.pas fixture highlights every comment style', async () => {
+  const tokens = await tokenize(fixture('RegionsTest.pas'));
+  const hasScope = (text, scope) => {
+    const t = tokens.find((x) => x.text.includes(text));
+    return !!(t && t.scopes.includes(scope));
+  };
+
+  // 1. line comments
+  assert.ok(hasScope('// single-line comment', 'comment.line.double-slash.delphi'), 'line comment');
+  assert.ok(hasScope('// trailing comment after code', 'comment.line.double-slash.delphi'), 'trailing line comment');
+  // 2. brace block comments (single and multi line)
+  assert.ok(hasScope('single-line brace comment', 'comment.block.delphi'), 'brace comment');
+  assert.ok(hasScope('multi-line brace comment', 'comment.block.delphi'), 'multi-line brace comment');
+  // 3. paren-star block comments (single and multi line)
+  assert.ok(hasScope('single-line paren-star comment', 'comment.block.pascal.delphi'), 'paren-star comment');
+  assert.ok(hasScope('multi-line paren-star comment', 'comment.block.pascal.delphi'), 'multi-line paren-star comment');
+  // 4. compiler directives are NOT comments
+  assert.ok(hasScope("'Comment Syntax Tests'", 'meta.preprocessor.delphi'), 'region directive');
+  assert.ok(hasScope('NEVER_DEFINED', 'meta.preprocessor.delphi'), 'ifdef directive');
+  // 5. comment-looking text inside strings stays a string
+  assert.ok(hasScope("'https://example.com/path?q={query}&x=//not-a-comment'", 'string.quoted.single.delphi'), 'url string');
+  assert.ok(hasScope("'string with {braces} and (*stars*) inside'", 'string.quoted.single.delphi'), 'braces in string');
+  assert.ok(hasScope("'{$REGION ''fake''} is plain text'", 'string.quoted.single.delphi'), 'directive in string');
+  // 6. commented-out markers stay comments (no preprocessor scope)
+  const fakeRegion = tokens.find((t) => t.text.includes("{$REGION 'Fake Region'}"));
+  assert.ok(fakeRegion, 'fake region token exists');
+  assert.ok(fakeRegion.scopes.some((s) => s.startsWith('comment.')), 'fake region must be a comment');
+  assert.ok(!fakeRegion.scopes.some((s) => s.includes('preprocessor')), 'fake region must not be a directive');
+  const fakeIfdef = tokens.find((t) => t.text.includes('{$IFDEF FAKE_DIRECTIVE}'));
+  assert.ok(fakeIfdef && fakeIfdef.scopes.some((s) => s.startsWith('comment.')), 'fake ifdef must be a comment');
+});
+
+test('language-configuration.json has no marker-based folding (provider only)', () => {
+  const cfg = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '..', 'language-configuration.json'), 'utf8')
+  );
+  assert.ok(cfg.folding === undefined, 'marker folding must not exist: it cannot see comments');
+});

@@ -310,6 +310,75 @@ end;
 
 {$ENDREGION}
 
+{$REGION 'Comment Syntax Tests'}
+// ---------------------------------------------------------------------------
+// 1. Line comments (//)
+// ---------------------------------------------------------------------------
+// single-line comment
+// comment with umlauts: äöü ÄÖÜ ß and code words: begin end interface class
+
+  // indented line comment
+  FActive := False; // trailing comment after code
+
+// ---------------------------------------------------------------------------
+// 2. Brace block comments ({ })
+// ---------------------------------------------------------------------------
+{ single-line brace comment }
+{ code words inside: begin end try except class record }
+
+{
+  multi-line brace comment
+  spanning several lines
+  with umlauts: äöü ÄÖÜ ß and specials: $ % & # ^ ~ [ ] ( ) ; :
+}
+
+// ---------------------------------------------------------------------------
+// 3. Paren-star block comments ((* *))
+// ---------------------------------------------------------------------------
+(* single-line paren-star comment *)
+(* code words inside: begin end class record *)
+
+(*
+  multi-line paren-star comment
+  containing { braces } and // slashes and $ dollar signs
+*)
+
+// ---------------------------------------------------------------------------
+// 4. Compiler directives are NOT comments
+// ---------------------------------------------------------------------------
+{$IFDEF NEVER_DEFINED}
+// conditionally compiled branch
+{$ELSE}
+// default branch
+{$ENDIF}
+
+{$REGION 'Directives inside region'}
+{$IF SizeOf(Pointer) = 8}
+// 64-bit path
+{$IFEND}
+{$ENDREGION}
+
+// ---------------------------------------------------------------------------
+// 5. Comment-looking text inside strings is NOT a comment
+// ---------------------------------------------------------------------------
+const
+  cFakeUrl = 'https://example.com/path?q={query}&x=//not-a-comment';
+  cFakeBraces = 'string with {braces} and (*stars*) inside';
+  cFakeDirective = '{$REGION ''fake''} is plain text';
+
+// ---------------------------------------------------------------------------
+// 6. Commented-out markers must NOT fold
+// ---------------------------------------------------------------------------
+(*
+  {$REGION 'Fake Region'}
+  this whole block is a comment
+  {$ENDREGION}
+  {$IFDEF FAKE_DIRECTIVE}
+  also a comment
+  {$ENDIF}
+*)
+{$ENDREGION}
+
 initialization
 {$REGION 'Module Init'}
   _GlobalInitialized := False;

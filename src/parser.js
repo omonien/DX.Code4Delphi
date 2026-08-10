@@ -72,8 +72,14 @@ class Decl {
   }
 }
 
-/** Blank out comments and string literals, preserving newlines and columns. */
-function maskSource(text) {
+/**
+ * Blank out comments and string literals, preserving newlines and columns.
+ * With `opts.keepDirectives` the single-line `{$...}` compiler directives are
+ * left untouched (only comments/strings are blanked) — used by the folding
+ * scans so that markers inside comments or strings are never seen.
+ */
+function maskSource(text, opts) {
+  const keepDirectives = !!(opts && opts.keepDirectives);
   const out = text.split('');
   const n = text.length;
   let i = 0;
@@ -84,8 +90,13 @@ function maskSource(text) {
     } else if (ch === '{') {
       if (text[i + 1] === '$') {
         // compiler directive: single line
-        while (i < n && text[i] !== '\n' && text[i] !== '}') { out[i] = ' '; i++; }
-        if (i < n && text[i] === '}') { out[i] = ' '; i++; }
+        if (keepDirectives) {
+          while (i < n && text[i] !== '\n' && text[i] !== '}') i++;
+          if (i < n && text[i] === '}') i++;
+        } else {
+          while (i < n && text[i] !== '\n' && text[i] !== '}') { out[i] = ' '; i++; }
+          if (i < n && text[i] === '}') { out[i] = ' '; i++; }
+        }
       } else {
         while (i < n && text[i] !== '}') { if (text[i] !== '\n') out[i] = ' '; i++; }
         if (i < n && text[i] === '}') { out[i] = ' '; i++; }
@@ -582,7 +593,9 @@ function computeFoldRegions(text, opts) {
   }
 
   if (opts.regions) {
-    const lines = text.split('\n');
+    // Scan the masked source with directives kept: markers inside comments or
+    // strings must not be seen (commented-out {$REGION} does not fold).
+    const lines = maskSource(text, { keepDirectives: true }).split('\n');
     const stack = [];
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i].trimStart();
@@ -598,7 +611,7 @@ function computeFoldRegions(text, opts) {
   }
 
   if (opts.conditionals) {
-    const lines = text.split('\n');
+    const lines = maskSource(text, { keepDirectives: true }).split('\n');
     const stack = [];
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i].trimStart();

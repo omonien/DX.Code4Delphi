@@ -28,12 +28,5 @@
   "indentationRules": {
     "increaseIndentPattern": "\\b(begin|case|try)\\b(?!.*\\bend\\b)",
     "decreaseIndentPattern": "^\\s*\\bend\\b"
-  },
-  "folding": {
-    "offSide": false,
-    "markers": {
-      "start": "^\\s*\\{\\$region\\b",
-      "end": "^\\s*\\{\\$endregion\\b"
-    }
   }
 }
