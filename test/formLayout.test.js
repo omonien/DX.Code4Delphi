@@ -271,6 +271,37 @@ describe('layoutEngine FMX', () => {
 });
 
 describe('layoutEngine edge cases', () => {
+  test('FMX Horizontal centers vertically, Vertical centers horizontally', () => {
+    const text = `
+object Form1: TForm1
+  ClientWidth = 200
+  ClientHeight = 100
+  object Line1: TLine
+    Position.X = 9
+    Position.Y = 7
+    Size.Width = 200
+    Size.Height = 2
+    Align = Horizontal
+  end
+  object Rect1: TRectangle
+    Position.X = 9
+    Position.Y = 7
+    Size.Width = 2
+    Size.Height = 100
+    Align = Vertical
+  end
+end
+`;
+    const root = parseDfm(text);
+    applyAlignLayout(root, { framework: 'fmx' });
+    const line = findChild(root, 'Line1');
+    assert.equal(line.bounds.top, 49, 'Horizontal is vertically centered');
+    assert.equal(line.bounds.left, 0, 'Horizontal stretches full width');
+    const rect = findChild(root, 'Rect1');
+    assert.equal(rect.bounds.left, 99, 'Vertical is horizontally centered');
+    assert.equal(rect.bounds.top, 0, 'Vertical stretches full height');
+  });
+
   test('Contents fills entire parent', () => {
     const text = `
 object Form1: TForm1
@@ -591,5 +622,63 @@ describe('DFM #xyz character encoding', () => {
     assert.equal(isDfmStringValue('alTop'), false);
     assert.equal(looksLikeStringProp('Caption'), true);
     assert.equal(looksLikeStringProp('Width'), false);
+  });
+
+  test('decodeDfmString keeps #n inside quoted chunks literal', () => {
+    assert.equal(decodeDfmString("'Room #2'"), 'Room #2');
+    assert.equal(decodeDfmString("'Issue #123'"), 'Issue #123');
+    assert.equal(decodeDfmString("'#1 choice'"), '#1 choice');
+  });
+
+  test('decodeDfmString empty and escaped-quote values', () => {
+    assert.equal(decodeDfmString("''"), '');
+    assert.equal(decodeDfmString("'It''s'"), "It's");
+  });
+
+  test('parser keeps // inside quoted values, strips trailing comments', () => {
+    const root = parseDfm(`
+object Form1: TForm1
+  Caption = 'http://example.com'
+  Hint = 'Hi' // trailing comment
+end
+`);
+    assert.equal(root.properties.Caption, 'http://example.com');
+    assert.equal(root.properties.Hint, 'Hi');
+  });
+
+  test('FMX < ... end> collections do not collapse the tree', () => {
+    const root = parseDfm(`
+object Form1: TForm1
+  ClientWidth = 200
+  ClientHeight = 100
+  object StyleBook1: TStyleBook
+    Left = 0
+    Top = 0
+    Resources = <
+      item
+        Name = 'x'
+        Data = {
+          666F6F}
+      end
+      item
+        Name = 'y'
+      end>
+  end
+  object Button1: TButton
+    Left = 8
+    Top = 8
+    Width = 75
+    Height = 25
+  end
+end
+`);
+    assert.ok(root);
+    assert.equal(root.children.length, 2, 'StyleBook1 + Button1 survive');
+    const sb = findChild(root, 'StyleBook1');
+    const btn = findChild(root, 'Button1');
+    assert.ok(sb, 'StyleBook1 present');
+    assert.ok(btn, 'Button1 stays a child of the form');
+    assert.equal(sb.children.length, 0, 'collection items do not leak as children');
+    assert.equal(btn.bounds.width, 75);
   });
 });

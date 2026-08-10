@@ -184,10 +184,10 @@ function layoutNode(parent, framework) {
     let left = c.bounds.left;
     let top = c.bounds.top;
 
-    if (c.align === 'Center' || c.align === 'HorzCenter' || c.align === 'Horizontal') {
+    if (c.align === 'Center' || c.align === 'HorzCenter' || c.align === 'Vertical') {
       left = client.left + Math.max(0, (client.right - client.left - sw) / 2);
     }
-    if (c.align === 'Center' || c.align === 'VertCenter' || c.align === 'Vertical') {
+    if (c.align === 'Center' || c.align === 'VertCenter' || c.align === 'Horizontal') {
       top = client.top + Math.max(0, (client.bottom - client.top - sh) / 2);
     }
     if (c.align === 'Horizontal') {

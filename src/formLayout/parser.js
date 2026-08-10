@@ -12,7 +12,8 @@ const { FormNode } = require('./model.js');
 
 const OBJECT_RE = /^(object|inherited|inline)\s+(?:(\w+)\s*:\s*)?(\w+(?:\.\w+)*)(?:\s*\[(\d+)\])?/i;
 const PROP_RE = /^([\w.]+)\s*=\s*(.*)$/;
-const END_RE = /^end\b/i;
+// `end>` terminates FMX collections, not objects — must not pop the stack
+const END_RE = /^end\b(?!>)/i;
 
 /**
  * @param {string} text
@@ -96,9 +97,8 @@ function parseDfm(text) {
         continue;
       }
 
-      // Strip trailing comments
-      const commentIdx = valueStr.indexOf('//');
-      if (commentIdx >= 0) valueStr = valueStr.slice(0, commentIdx).trim();
+      // Strip trailing comments (quote-aware: '//' inside strings is not a comment)
+      valueStr = stripTrailingComment(valueStr);
 
       const current = stack[stack.length - 1];
       applyLayoutProperty(current, propName, valueStr);
@@ -239,17 +239,34 @@ function parseNumber(s) {
 /**
  * Very simple skip for multi-line values. Not perfect, but prevents the parser
  * from treating content of strings/binary blocks as objects/properties.
+ *
+ * FMX `< … end>` collections are consumed wholesale (their `item` blocks may
+ * contain property-looking lines and nested `{ }` blobs that must not leak
+ * into the enclosing object).
  */
 function skipComplexValue(lines, startIdx) {
+  const first = lines[startIdx].trim();
+  const inCollection = first.includes('<');
   let i = startIdx + 1;
   let depth = 1;
+  let braceDepth = 0;
   while (i < lines.length && depth > 0) {
     const t = lines[i].trim();
+    if (inCollection) {
+      if (t.includes('{')) braceDepth++;
+      if (t.includes('}')) braceDepth = Math.max(0, braceDepth - 1);
+      if (braceDepth === 0) {
+        // collection terminator: `end>` (or a lone `>` on its own line)
+        if (t === 'end>' || t === '>') return i + 1;
+      }
+      i++;
+      continue;
+    }
     if (t.includes('{')) depth++;
     if (t.includes('}')) depth--;
-    if (t.startsWith('>') || t === 'end>' || t.startsWith(')')) depth = 0;
+    if (t.startsWith(')')) depth = 0;
     // also stop at a clear property or object start on next lines
-    if (OBJECT_RE.test(t) || END_RE.test(t) || PROP_RE.test(t)) {
+    if (depth > 0 && (OBJECT_RE.test(t) || END_RE.test(t) || PROP_RE.test(t))) {
       // do not consume that line
       return i;
     }
@@ -259,23 +276,71 @@ function skipComplexValue(lines, startIdx) {
 }
 
 /**
- * Decode Delphi #xyz character encoding.
- * 'J'#228'nner' → 'Jänner', #13#10 → '\r\n'
+ * Remove a trailing `//` comment, but only when it occurs outside a quoted
+ * string chunk (quote parity scan; `''` escaped quotes stay inside).
+ *
+ * @param {string} valueStr
+ * @returns {string}
+ */
+function stripTrailingComment(valueStr) {
+  if (typeof valueStr !== 'string') return valueStr;
+  let inQuote = false;
+  for (let i = 0; i < valueStr.length; i++) {
+    const c = valueStr[i];
+    if (c === "'") {
+      if (inQuote && valueStr[i + 1] === "'") { i++; continue; } // '' escape
+      inQuote = !inQuote;
+    } else if (!inQuote && c === '/' && valueStr[i + 1] === '/') {
+      return valueStr.slice(0, i).trim();
+    }
+  }
+  return valueStr;
+}
+
+/**
+ * Decode Delphi #xyz character encoding, segment-wise:
+ *   'J'#228'nner' → 'Jänner',  #13#10 → '\r\n'
+ * `#n` is only significant OUTSIDE quoted chunks; inside quotes it is literal
+ * text ('Room #2' stays 'Room #2'). `''` inside a quoted chunk is an escaped
+ * quote; a bare `''` value decodes to the empty string.
  *
  * @param {string} raw
  * @returns {string}
  */
 function decodeDfmString(raw) {
   if (typeof raw !== 'string') return '';
-  let s = raw.trim();
-  s = s.replace(/#(\d{1,5})/g, (_, code) => {
-    const n = parseInt(code, 10);
-    return n <= 0x10FFFF ? String.fromCodePoint(n) : '';
-  });
-  s = s.replace(/''/g, '\u0000');
-  s = s.replace(/'/g, '');
-  s = s.replace(/\u0000/g, "'");
-  return s;
+  const s = raw.trim();
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === "'") {
+      i++;
+      while (i < s.length) {
+        if (s[i] === "'") {
+          if (s[i + 1] === "'") { out += "'"; i += 2; continue; }
+          i++;
+          break;
+        }
+        out += s[i];
+        i++;
+      }
+    } else if (ch === '#') {
+      const m = /^#(\d{1,5})/.exec(s.slice(i));
+      if (m) {
+        const n = parseInt(m[1], 10);
+        out += n <= 0x10FFFF ? String.fromCodePoint(n) : '';
+        i += m[0].length;
+      } else {
+        out += ch;
+        i++;
+      }
+    } else {
+      out += ch;
+      i++;
+    }
+  }
+  return out;
 }
 
 /**
@@ -342,4 +407,5 @@ module.exports = {
   isBinaryPropertyName,
   isTextPropertyValue,
   decodeDfmString,
+  stripTrailingComment,
 };
