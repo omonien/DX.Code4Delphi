@@ -22,7 +22,9 @@ const TYPE_DECL_RE = new RegExp(
 );
 const END_RE = /^\s*end\b[;.]?/;
 const IFACE_METHOD_RE = new RegExp(`^\\s*${METHOD_KW}\\s+(${IDENT})`);
-const IMPL_METHOD_RE = new RegExp(`^\\s*${METHOD_KW}\\s+(${IDENT})(?:<[^>]+>)?(?:\\.(${IDENT}))?`);
+/** Matches the method keyword at the start of an implementation header line. */
+const IMPL_METHOD_START_RE = new RegExp(`^\\s*${METHOD_KW}\\s+`, 'i');
+const IDENT_RE = new RegExp(`^${IDENT}`);
 
 /**
  * True when this type header opens a body that will be closed by `end`
@@ -33,6 +35,79 @@ function typeDeclOpensBody(restAfterKeyword) {
   if (rest.startsWith(';')) return false; // forward: TFoo = class;
   if (/^of\b/i.test(rest)) return false; // metaclass: TMeta = class of TObject
   return true;
+}
+
+/**
+ * Skip a balanced `<...>` generic argument list starting at `text[i]` (`<`).
+ * Returns the index just past the matching `>`, or `i` if not a generic list.
+ */
+function skipGenericArgs(text, i) {
+  if (text[i] !== '<') return i;
+  let depth = 1;
+  let j = i + 1;
+  while (j < text.length && depth > 0) {
+    const ch = text[j];
+    if (ch === '<') depth++;
+    else if (ch === '>') depth--;
+    j++;
+  }
+  return depth === 0 ? j : i;
+}
+
+/**
+ * Fully qualified owner for a method declared inside nested types
+ * (`TOuter.TInner`), or null at unit scope.
+ */
+function qualifiedOwner(stack) {
+  if (!stack || stack.length === 0) return null;
+  return stack.map((s) => s.name).join('.');
+}
+
+/**
+ * Parse an implementation method's qualified name after the keyword match.
+ * Supports multi-level nested types and optional generic args on each segment:
+ *   Foo
+ *   TFoo.Bar
+ *   TOuter.TInner.Bar
+ *   TOuter<T>.TInner.Ping
+ *   TOuter.TInner.Prop<E>
+ *
+ * Returns { name, className, nameColInTrimmed, endInTrimmed } or null.
+ * `className` strips generic args (matches interface scanning). `endInTrimmed`
+ * is past any method-level `<...>` so `readSignature` sees the `(` next.
+ */
+function parseImplQualifiedName(trimmed, afterKeywordIndex) {
+  let i = afterKeywordIndex;
+  const segments = []; // { name, nameStart, end }
+  while (i < trimmed.length) {
+    const m = trimmed.slice(i).match(IDENT_RE);
+    if (!m) break;
+    const name = m[0];
+    const nameStart = i;
+    i += name.length;
+    i = skipGenericArgs(trimmed, i);
+    segments.push({ name, nameStart, end: i });
+    if (trimmed[i] === '.') {
+      i++;
+      continue;
+    }
+    break;
+  }
+  if (segments.length === 0) return null;
+  const last = segments[segments.length - 1];
+  const className =
+    segments.length > 1
+      ? segments
+          .slice(0, -1)
+          .map((s) => s.name)
+          .join('.')
+      : null;
+  return {
+    name: last.name,
+    className,
+    nameColInTrimmed: last.nameStart,
+    endInTrimmed: last.end,
+  };
 }
 
 class SectionIndex {
@@ -49,7 +124,7 @@ class Decl {
     this.section = opts.section; // 'interface' | 'implementation'
     this.kind = opts.kind;       // procedure|function|constructor|destructor|operator
     this.name = opts.name;       // method name (unqualified)
-    this.className = opts.className || null; // enclosing class or qualified class prefix
+    this.className = opts.className || null; // enclosing type path (e.g. TOuter.TInner) or qualified prefix
     this.line = opts.line;       // line of the declaration keyword
     this.col = opts.col;         // column of the method name
     this.nameLen = opts.nameLen;
@@ -290,7 +365,7 @@ function readSignature(source, masked, offset, lineStarts, declLine) {
   return { paramsText, params, returnType, endOffset, endLine, endCol };
 }
 
-/** Scan interface-section declarations (methods inside class bodies). */
+/** Scan interface-section declarations (methods inside class/record bodies). */
 function scanInterfaceDecls(source, masked, lineStarts, startLine, endLine) {
   const methods = [];
   const classes = [];
@@ -325,7 +400,7 @@ function scanInterfaceDecls(source, masked, lineStarts, startLine, endLine) {
         section: 'interface',
         kind: m[1].toLowerCase(),
         name,
-        className: stack.length > 0 ? stack[stack.length - 1].name : null,
+        className: qualifiedOwner(stack),
         line: i,
         col,
         nameLen: name.length,
@@ -369,36 +444,38 @@ function scanImplDecls(source, masked, lineStarts, startLine, endLine) {
     const trimmed = line.trimStart();
     const indent = line.length - trimmed.length;
     if (depth === 0 && trimmed.length > 0) {
-      const m = trimmed.match(IMPL_METHOD_RE);
-      if (m) {
+      const kw = trimmed.match(IMPL_METHOD_START_RE);
+      if (kw) {
         if (!awaitingBody && nestedLocals === 0) {
-          const name = m[3] || m[2];
-          const className = m[3] ? m[2] : null;
-          const col = indent + m.index + m[0].length - name.length;
-          const offset = lineStarts[i] + col + name.length;
-          const sig = readSignature(source, masked, offset, lineStarts, i);
-          methods.push(new Decl({
-            section: 'implementation',
-            kind: m[1].toLowerCase(),
-            name,
-            className,
-            line: i,
-            col,
-            nameLen: name.length,
-            params: sig.params,
-            paramsText: sig.paramsText,
-            returnType: sig.returnType,
-            signatureEndLine: sig.endLine,
-            signatureEndCol: sig.endCol,
-          }));
-          const after = trimmed.slice(m[0].length);
-          if (!/\bbegin\b/.test(after) && !/\b(forward|external)\b/.test(after)) {
-            awaitingBody = true;
+          const parsed = parseImplQualifiedName(trimmed, kw[0].length);
+          if (parsed) {
+            const col = indent + parsed.nameColInTrimmed;
+            const offset = lineStarts[i] + indent + parsed.endInTrimmed;
+            const sig = readSignature(source, masked, offset, lineStarts, i);
+            methods.push(new Decl({
+              section: 'implementation',
+              kind: kw[1].toLowerCase(),
+              name: parsed.name,
+              className: parsed.className,
+              line: i,
+              col,
+              nameLen: parsed.name.length,
+              params: sig.params,
+              paramsText: sig.paramsText,
+              returnType: sig.returnType,
+              signatureEndLine: sig.endLine,
+              signatureEndCol: sig.endCol,
+            }));
+            const after = trimmed.slice(parsed.endInTrimmed);
+            if (!/\bbegin\b/.test(after) && !/\b(forward|external)\b/.test(after)) {
+              awaitingBody = true;
+            }
           }
         } else if (awaitingBody) {
           // Local routine declared before the outer begin
           nestedLocals++;
-          const after = trimmed.slice(m[0].length);
+          const parsed = parseImplQualifiedName(trimmed, kw[0].length);
+          const after = parsed ? trimmed.slice(parsed.endInTrimmed) : trimmed.slice(kw[0].length);
           // Same-line begin/end is handled purely by block depth below
           if (/\b(forward|external)\b/.test(after)) {
             nestedLocals = Math.max(0, nestedLocals - 1);

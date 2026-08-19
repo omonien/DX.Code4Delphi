@@ -5,6 +5,18 @@ All notable changes to **Code4Delphi** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Ctrl+Shift+Up/Down for nested records (and nested classes).** Interface
+  methods inside nested types now keep a fully qualified owner
+  (`TOuter.TInner`), and implementation headers with multi-level qualifiers
+  (`TOuter.TInner.Foo`, including `TOuter<T>.TInner.Foo`) are parsed correctly.
+  Fixes Spring4D-style fluent record builders such as
+  `TLoggingConfigurationBuilder.TLoggerBuilder` where navigation previously
+  found no pair and appeared to do nothing. (#4)
+
 ## [2.0.3] — 2026-08-10
 
 ### Fixed

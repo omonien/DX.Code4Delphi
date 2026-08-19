@@ -604,3 +604,105 @@ test('all comment styles in RegionsTest.pas fold nothing and keep real folds', (
   assert.ok(ifStarts >= 5, 'fixture keeps its conditional coverage');
   assert.equal(folds.length, regionStarts + ifStarts, 'every real marker produces exactly one fold');
 });
+
+test('nested record methods use fully qualified owners (Spring4D-style)', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  TOuter = record',
+    '  public type',
+    '    TInner = record',
+    '      fX: Integer;',
+    '      function Foo: Integer;',
+    '      procedure Bar;',
+    '    end;',
+    '  public',
+    '    function OuterOnly: Boolean;',
+    '  end;',
+    'implementation',
+    'function TOuter.OuterOnly: Boolean;',
+    'begin',
+    '  Result := True;',
+    'end;',
+    'function TOuter.TInner.Foo: Integer;',
+    'begin',
+    '  Result := fX;',
+    'end;',
+    'procedure TOuter.TInner.Bar;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  const foo = model.interfaceMethods.find((d) => d.name === 'Foo');
+  const bar = model.interfaceMethods.find((d) => d.name === 'Bar');
+  const outerOnly = model.interfaceMethods.find((d) => d.name === 'OuterOnly');
+  assert.equal(foo.className, 'TOuter.TInner');
+  assert.equal(bar.className, 'TOuter.TInner');
+  assert.equal(outerOnly.className, 'TOuter');
+
+  const fooImpl = findImplementation(foo, model.implementationMethods, true);
+  const barImpl = findImplementation(bar, model.implementationMethods, true);
+  const outerImpl = findImplementation(outerOnly, model.implementationMethods, true);
+  assert.ok(fooImpl, 'nested record Foo must resolve');
+  assert.ok(barImpl, 'nested record Bar must resolve');
+  assert.ok(outerImpl, 'outer record method must still resolve');
+  assert.equal(fooImpl.className, 'TOuter.TInner');
+  assert.equal(fooImpl.name, 'Foo');
+  assert.equal(findDeclaration(fooImpl, model.interfaceMethods, true), foo);
+
+  const hit = methodAtPosition(model, fooImpl.line, fooImpl.col + 1);
+  assert.equal(hit, fooImpl);
+});
+
+test('nested class methods also use multi-level implementation qualifiers', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  TOuter = class',
+    '  public type',
+    '    TInner = class',
+    '      procedure Ping;',
+    '    end;',
+    '  end;',
+    'implementation',
+    'procedure TOuter.TInner.Ping;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  const ping = model.interfaceMethods.find((d) => d.name === 'Ping');
+  assert.equal(ping.className, 'TOuter.TInner');
+  const impl = findImplementation(ping, model.implementationMethods, true);
+  assert.ok(impl);
+  assert.equal(impl.className, 'TOuter.TInner');
+  assert.equal(impl.name, 'Ping');
+});
+
+test('generic outer type with nested record strips type args from the owner', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  TOuter<T> = record',
+    '  public type',
+    '    TInner = record',
+    '      procedure Ping;',
+    '    end;',
+    '  end;',
+    'implementation',
+    'procedure TOuter<T>.TInner.Ping;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  const ping = model.interfaceMethods.find((d) => d.name === 'Ping');
+  assert.equal(ping.className, 'TOuter.TInner');
+  const impl = findImplementation(ping, model.implementationMethods, true);
+  assert.ok(impl);
+  assert.equal(impl.className, 'TOuter.TInner');
+});
