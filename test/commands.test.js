@@ -58,11 +58,12 @@ function fixture(name) {
   return fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8');
 }
 
-function makeEditor(line, character) {
+function makeEditor(line, character, sourceText) {
+  const text = sourceText !== undefined ? sourceText : fixture('MyUnit.pas');
   const editor = {
     document: {
       languageId: 'delphi',
-      getText: () => fixture('MyUnit.pas'),
+      getText: () => text,
     },
     _selection: { active: new Position(line, character) },
     revealCalls: [],
@@ -77,6 +78,46 @@ function makeEditor(line, character) {
     },
   };
   return editor;
+}
+
+/** Spring4D-style fluent record builder with nested records (multi-level qualifiers). */
+function nestedRecordBuilderSource() {
+  return [
+    'unit LoggingBuilder;',
+    'interface',
+    'type',
+    "{$REGION 'TLoggerBuilder'}",
+    '  TLoggingConfigurationBuilder = record',
+    '  public type',
+    '    TLoggerBuilder = record',
+    '    private',
+    '      fBuilder: IBuilder; // cursor on field',
+    '    public',
+    '      function EndLogger: TLoggingConfigurationBuilder;',
+    '      function Enabled(value: Boolean): TLoggerBuilder;',
+    '      function Levels(value: TLogLevels): TLoggerBuilder;',
+    '    end;',
+    '  private',
+    '    fBuilder: IBuilder;',
+    '  public',
+    '    function BeginLogger: TLoggerBuilder;',
+    '  end;',
+    '{$ENDREGION}',
+    'implementation',
+    'function TLoggingConfigurationBuilder.BeginLogger: TLoggerBuilder;',
+    'begin',
+    'end;',
+    'function TLoggingConfigurationBuilder.TLoggerBuilder.EndLogger: TLoggingConfigurationBuilder;',
+    'begin',
+    'end;',
+    'function TLoggingConfigurationBuilder.TLoggerBuilder.Enabled(value: Boolean): TLoggerBuilder;',
+    'begin',
+    'end;',
+    'function TLoggingConfigurationBuilder.TLoggerBuilder.Levels(value: TLogLevels): TLoggerBuilder;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
 }
 
 test('goToImplementation jumps from interface declaration to implementation', () => {
@@ -194,4 +235,92 @@ test('selectColorScheme quick pick updates the colorScheme setting', async () =>
   assert.deepEqual(updated, { key: 'colorScheme', value: 'turboPascal' });
   vscodeMock.window.showQuickPick = originalQuickPick;
   vscodeMock.workspace.getConfiguration = originalGetConfig;
+});
+
+test('goToImplementation jumps from a top-level record method declaration', () => {
+  const lines = fixture('MyUnit.pas').split('\n');
+  const decl = lines.findIndex((l) => /procedure Reset; inline;/.test(l));
+  const editor = makeEditor(decl, 16);
+  commands.goToImplementation(editor);
+  const lineText = lines[editor.selection.active.line];
+  assert.match(lineText, /procedure TMyRecord\.Reset;/);
+  assert.ok(editor.selection.active.line > decl);
+});
+
+test('goToImplementation from a record field jumps like a class field (section header)', () => {
+  const lines = fixture('MyUnit.pas').split('\n');
+  const field = lines.findIndex((l) => /X, Y: Integer;/.test(l));
+  assert.ok(field >= 0);
+  const editor = makeEditor(field, 6);
+  commands.goToImplementation(editor);
+  assert.match(lines[editor.selection.active.line].trim(), /^implementation$/);
+});
+
+test('goToDeclaration jumps from a record method implementation back to the declaration', () => {
+  const lines = fixture('MyUnit.pas').split('\n');
+  const impl = lines.findIndex((l) => /procedure TMyRecord\.Reset;/.test(l));
+  const editor = makeEditor(impl, 12);
+  commands.goToDeclaration(editor);
+  assert.match(lines[editor.selection.active.line], /procedure Reset; inline;/);
+  assert.ok(editor.selection.active.line < impl);
+});
+
+test('nested record method declaration jumps to Outer.Inner.Method implementation', () => {
+  const src = nestedRecordBuilderSource();
+  const lines = src.split('\n');
+  const decl = lines.findIndex((l) => /function EndLogger: TLoggingConfigurationBuilder;/.test(l));
+  const editor = makeEditor(decl, 18, src);
+  commands.goToImplementation(editor);
+  const lineText = lines[editor.selection.active.line];
+  assert.match(
+    lineText,
+    /function TLoggingConfigurationBuilder\.TLoggerBuilder\.EndLogger/
+  );
+});
+
+test('nested record field jumps to implementation section (same as class field)', () => {
+  const src = nestedRecordBuilderSource();
+  const lines = src.split('\n');
+  const field = lines.findIndex((l) => /fBuilder: IBuilder; \/\/ cursor on field/.test(l));
+  const editor = makeEditor(field, 8, src);
+  commands.goToImplementation(editor);
+  assert.match(lines[editor.selection.active.line].trim(), /^implementation$/);
+});
+
+test('nested record method implementation jumps back to the declaration', () => {
+  const src = nestedRecordBuilderSource();
+  const lines = src.split('\n');
+  const impl = lines.findIndex((l) =>
+    /function TLoggingConfigurationBuilder\.TLoggerBuilder\.Enabled/.test(l)
+  );
+  const editor = makeEditor(impl, 50, src);
+  commands.goToDeclaration(editor);
+  assert.match(lines[editor.selection.active.line], /function Enabled\(value: Boolean\): TLoggerBuilder;/);
+  assert.ok(editor.selection.active.line < impl);
+});
+
+test('nested generic record method navigation uses Outer.Inner qualification', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  TOuter<T> = record',
+    '  public type',
+    '    TInner = record',
+    '      procedure Ping;',
+    '    end;',
+    '  end;',
+    'implementation',
+    'procedure TOuter<T>.TInner.Ping;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const lines = src.split('\n');
+  const decl = lines.findIndex((l) => /procedure Ping;/.test(l));
+  const editor = makeEditor(decl, 18, src);
+  commands.goToImplementation(editor);
+  assert.match(lines[editor.selection.active.line], /procedure TOuter<T>\.TInner\.Ping;/);
+  commands.goToDeclaration(editor);
+  assert.match(lines[editor.selection.active.line], /^\s*procedure Ping;/);
 });
