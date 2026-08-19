@@ -706,3 +706,73 @@ test('generic outer type with nested record strips type args from the owner', ()
   assert.ok(impl);
   assert.equal(impl.className, 'TOuter.TInner');
 });
+
+test('method-level generics with parameters round-trip (iface + nested impl)', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  TOuter = record',
+    '  public type',
+    '    TInner = record',
+    '      procedure Foo<T>(X: Integer);',
+    '      function Prop<E>(const Name: string; const Value: E): TInner;',
+    '    end;',
+    '  end;',
+    'implementation',
+    'procedure TOuter.TInner.Foo<T>(X: Integer);',
+    'begin',
+    'end;',
+    'function TOuter.TInner.Prop<E>(const Name: string; const Value: E): TInner;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  const foo = model.interfaceMethods.find((d) => d.name === 'Foo');
+  const prop = model.interfaceMethods.find((d) => d.name === 'Prop');
+  assert.ok(foo, 'Foo declaration must be found');
+  assert.ok(prop, 'Prop declaration must be found');
+  assert.equal(foo.className, 'TOuter.TInner');
+  assert.deepEqual(foo.params, ['integer']);
+  assert.deepEqual(prop.params, ['string', 'e']);
+
+  const fooImpl = findImplementation(foo, model.implementationMethods, true);
+  const propImpl = findImplementation(prop, model.implementationMethods, true);
+  assert.ok(fooImpl, 'Foo<T>(X: Integer) must resolve with overload matching');
+  assert.ok(propImpl, 'Prop<E>(...) must resolve with overload matching');
+  assert.equal(fooImpl.name, 'Foo');
+  assert.equal(fooImpl.className, 'TOuter.TInner');
+  assert.deepEqual(fooImpl.params, ['integer']);
+  assert.equal(findDeclaration(fooImpl, model.interfaceMethods, true), foo);
+  assert.equal(findDeclaration(propImpl, model.interfaceMethods, true), prop);
+});
+
+test('over-indented type end does not leak into the next type owner path', () => {
+  const src = [
+    'unit U;',
+    'interface',
+    'type',
+    '  TFoo = class',
+    '    procedure FooMethod;',
+    '      end;', // closing end indented farther than the type header
+    '  TBar = class',
+    '    procedure BarMethod;',
+    '  end;',
+    'implementation',
+    'procedure TFoo.FooMethod;',
+    'begin',
+    'end;',
+    'procedure TBar.BarMethod;',
+    'begin',
+    'end;',
+    'end.',
+  ].join('\n');
+  const model = analyze(src);
+  const foo = model.interfaceMethods.find((d) => d.name === 'FooMethod');
+  const bar = model.interfaceMethods.find((d) => d.name === 'BarMethod');
+  assert.equal(foo.className, 'TFoo');
+  assert.equal(bar.className, 'TBar', 'TBar must not become TFoo.TBar after a stale stack entry');
+  assert.ok(findImplementation(foo, model.implementationMethods, true));
+  assert.ok(findImplementation(bar, model.implementationMethods, true));
+});

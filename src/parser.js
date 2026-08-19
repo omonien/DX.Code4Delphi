@@ -382,6 +382,12 @@ function scanInterfaceDecls(source, masked, lineStarts, startLine, endLine) {
       classes.push({ name, line: i });
       // Forward (`class;`) and metaclass (`class of`) open no body — do not push
       if (typeDeclOpensBody(typeMatch[3])) {
+        // Drop siblings / stale types at the same-or-deeper indent so an
+        // over-indented `end` (which did not pop) cannot poison the next type's
+        // qualified path (TFoo stuck → TBar would become TFoo.TBar).
+        while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+          stack.pop();
+        }
         stack.push({ name, indent });
       }
       continue;
@@ -393,8 +399,11 @@ function scanInterfaceDecls(source, masked, lineStarts, startLine, endLine) {
     const m = trimmed.match(IFACE_METHOD_RE);
     if (m && !/^(?:end|begin)\b/.test(trimmed)) {
       const name = m[2];
-      const col = indent + m.index + m[0].length - name.length;
-      const offset = lineStarts[i] + col + name.length;
+      const afterName = m.index + m[0].length;
+      // Skip method-level generics (`Foo<T>(...)`) so params match the impl side
+      const afterGenerics = skipGenericArgs(trimmed, afterName);
+      const col = indent + afterName - name.length;
+      const offset = lineStarts[i] + indent + afterGenerics;
       const sig = readSignature(source, masked, offset, lineStarts, i);
       methods.push(new Decl({
         section: 'interface',

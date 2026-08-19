@@ -13,7 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   methods inside nested types now keep a fully qualified owner
   (`TOuter.TInner`), and implementation headers with multi-level qualifiers
   (`TOuter.TInner.Foo`, including `TOuter<T>.TInner.Foo`) are parsed correctly.
-  Fixes Spring4D-style fluent record builders such as
+  Method-level generics (`Foo<T>(...)`) are skipped on both sides so overload
+  matching still works. Sibling type headers prune stale stack entries so an
+  over-indented `end` cannot turn the next type into `TFoo.TBar`. Fixes
+  Spring4D-style fluent record builders such as
   `TLoggingConfigurationBuilder.TLoggerBuilder` where navigation previously
   found no pair and appeared to do nothing. (#4)
 
