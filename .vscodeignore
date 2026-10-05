@@ -6,3 +6,7 @@ test/**
 **/.gitignore
 **/node_modules/**
 .gitignore
+
+media/banner.svg
+media/banner-icon.png
+docs/regenerate-banner.md
