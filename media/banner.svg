@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Source for media/banner.png (1024x256).
+  Re-render: open docs/banner-render.html in a browser with Inter installed,
+  or use the HTML generator in docs/regenerate-banner.md.
+  Icon artwork: media/banner-icon.png (extracted from the original banner).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1024" height="256" viewBox="0 0 1024 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#222833"/>
+      <stop offset="55%" stop-color="#1a1e2a"/>
+      <stop offset="100%" stop-color="#151822"/>
+    </linearGradient>
+    <linearGradient id="vignette" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1a1e2a" stop-opacity="0"/>
+      <stop offset="70%" stop-color="#1a1e2a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#12151c" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="256" rx="40" ry="40" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1024" height="256" rx="40" ry="40" fill="url(#vignette)"/>
+  <image x="63" y="44" width="166" height="166" href="banner-icon.png" xlink:href="banner-icon.png"/>
+  <text x="285" y="118"
+        font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="48" font-weight="700" letter-spacing="-0.6"
+        fill="#01A3DA">DX.Code4Delphi</text>
+  <text x="285" y="158"
+        font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="20" font-weight="400"
+        fill="#AAB3C5">Delphi Language Support for Visual Studio Code</text>
+  <text x="285" y="198"
+        font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="16" font-weight="400"
+        fill="#AAB3C5">by Developer Experts, LLC  ·  www.developer-experts.net</text>
+</svg>
