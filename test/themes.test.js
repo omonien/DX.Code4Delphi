@@ -25,6 +25,8 @@ const CORE_SCOPES = [
   'entity.name.function.delphi',
   'entity.name.type.delphi',
   'entity.other.attribute-name.delphi',
+  'punctuation.definition.annotation.begin.delphi',
+  'punctuation.definition.annotation.end.delphi',
   'string.quoted.single.delphi',
   'constant.numeric.integer.delphi',
   'constant.language.delphi',
@@ -48,7 +50,7 @@ test('all four schemes are valid and complete', () => {
   for (const name of THEMES) {
     const theme = readTheme(name);
     assert.ok(theme.name, `${name}: name`);
-    assert.ok(theme.name.startsWith('Code4Delphi '), `${name}: name prefix`);
+    assert.ok(theme.name.startsWith('DX.Code4Delphi ') || theme.name.startsWith('Code4Delphi '), `${name}: name prefix`);
     assert.ok(Array.isArray(theme.tokenColors) && theme.tokenColors.length >= 10, `${name}: tokenColors`);
 
     const scopes = flatScopes(theme);
@@ -88,7 +90,7 @@ test('package.json defines the schemes, commands and three keybinding styles', (
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
   // no full color themes are contributed — schemes are per-language token colors only
   assert.equal(pkg.contributes.themes, undefined, 'no contributes.themes (global themes)');
-  assert.equal(pkg.contributes.configuration.title, 'Code4Delphi');
+  assert.equal(pkg.contributes.configuration.title, 'DX.Code4Delphi');
 
   const styleSetting = pkg.contributes.configuration.properties['delphi.keybindings.style'];
   assert.deepEqual(styleSetting.enum, ['default', 'emacs', 'wordstar']);
@@ -107,7 +109,7 @@ test('package.json defines the schemes, commands and three keybinding styles', (
   const cmdIds = pkg.contributes.commands.map((c) => c.command);
   assert.ok(cmdIds.includes('delphi.selectColorScheme'));
   assert.ok(cmdIds.includes('delphi.selectKeybindingStyle'));
-  assert.ok(pkg.contributes.commands.every((c) => c.category === 'Code4Delphi'));
+  assert.ok(pkg.contributes.commands.every((c) => c.category === 'DX.Code4Delphi'));
 
   const bindings = pkg.contributes.keybindings;
   const byStyle = { default: [], emacs: [], wordstar: [] };

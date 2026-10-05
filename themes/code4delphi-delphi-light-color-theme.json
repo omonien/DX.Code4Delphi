@@ -1,5 +1,5 @@
 {
-  "name": "Code4Delphi Delphi Light",
+  "name": "DX.Code4Delphi Delphi Light",
   "tokenColors": [
     {
       "scope": [
@@ -36,12 +36,21 @@
         "entity.name.type.delphi",
         "meta.type-parameter.delphi",
         "entity.name.variable.property.delphi",
-        "entity.other.attribute-name.delphi",
-        "meta.attribute.delphi",
         "variable.other.delphi"
       ],
       "settings": {
         "foreground": "#000000"
+      }
+    },
+    {
+      "scope": [
+        "entity.other.attribute-name.delphi",
+        "meta.attribute.delphi",
+        "punctuation.definition.annotation.begin.delphi",
+        "punctuation.definition.annotation.end.delphi"
+      ],
+      "settings": {
+        "foreground": "#9a6700"
       }
     },
     {

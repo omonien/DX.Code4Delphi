@@ -1,5 +1,5 @@
 {
-  "name": "Code4Delphi Fancy",
+  "name": "DX.Code4Delphi Fancy",
   "tokenColors": [
     {
       "scope": [
@@ -82,7 +82,9 @@
     {
       "scope": [
         "entity.other.attribute-name.delphi",
-        "meta.attribute.delphi"
+        "meta.attribute.delphi",
+        "punctuation.definition.annotation.begin.delphi",
+        "punctuation.definition.annotation.end.delphi"
       ],
       "settings": {
         "foreground": "#4fc1ff"

@@ -258,8 +258,10 @@ test('attributes are recognized (and array indexing is not)', async () => {
   assert.ok(attrName && attrName.includes('entity.other.attribute-name.delphi'), attrName && attrName.join(' '));
   const bracket = await scopesFor(s, '[');
   assert.ok(bracket && bracket.includes('meta.attribute.delphi'), bracket && bracket.join(' '));
+  assert.ok(bracket.includes('punctuation.definition.annotation.begin.delphi'), bracket.join(' '));
   const close = await scopesFor(s, ']');
   assert.ok(close && close.includes('meta.attribute.delphi'), close && close.join(' '));
+  assert.ok(close.includes('punctuation.definition.annotation.end.delphi'), close.join(' '));
   // array indexing must NOT be treated as an attribute
   const idx = await scopesFor(s, '[0..9]');
   assert.equal(idx, null, 'array index must not be an attribute');
@@ -417,4 +419,45 @@ test('language-configuration.json has no marker-based folding (provider only)', 
     fs.readFileSync(path.join(__dirname, '..', 'language-configuration.json'), 'utf8')
   );
   assert.ok(cfg.folding === undefined, 'marker folding must not exist: it cannot see comments');
+});
+
+test('custom attributes with arguments (JsonName, Test) stay distinct from indexes', async () => {
+  const s = [
+    "[Test]",
+    "[JsonName('customer_id')]",
+    "procedure Foo;",
+    "var",
+    "  Items: array[0..9] of Integer;",
+    "  Flags: set of Byte;",
+    "begin",
+    "  Items[0] := 1;",
+    "  Flags := [1, 2, 3];",
+    "end;",
+  ].join('\n');
+  const testName = await scopesFor(s, 'Test');
+  assert.ok(testName && testName.includes('entity.other.attribute-name.delphi'), testName && testName.join(' '));
+  assert.ok(testName.includes('meta.attribute.delphi'), testName.join(' '));
+  const jsonName = await scopesFor(s, 'JsonName');
+  assert.ok(jsonName && jsonName.includes('entity.other.attribute-name.delphi'), jsonName && jsonName.join(' '));
+  const open = await scopesFor(s, '[');
+  assert.ok(open && open.includes('punctuation.definition.annotation.begin.delphi'), open && open.join(' '));
+  const close = await scopesFor(s, ']');
+  assert.ok(close && close.includes('punctuation.definition.annotation.end.delphi'), close && close.join(' '));
+  // string argument inside attribute keeps string scope
+  const arg = await scopesFor(s, "'customer_id'");
+  assert.ok(arg && arg.some((sc) => sc.includes('string')), arg && arg.join(' '));
+  // array type index / runtime index / set literal must not use attribute scopes
+  const tokens = await tokenize(s);
+  const nonAttrBrackets = tokens.filter(
+    (t) => t.text === '[' && !t.scopes.includes('meta.attribute.delphi')
+  );
+  assert.ok(nonAttrBrackets.length >= 2, 'expected non-attribute [ tokens for array/set/index');
+  for (const t of nonAttrBrackets) {
+    assert.ok(!t.scopes.includes('entity.other.attribute-name.delphi'), t.scopes.join(' '));
+    assert.ok(!t.scopes.includes('punctuation.definition.annotation.begin.delphi'), t.scopes.join(' '));
+  }
+  // numeric set elements are numbers, not attribute names
+  const one = tokens.find((t) => t.text === '1' && t.scopes.includes('constant.numeric.integer.delphi'));
+  assert.ok(one, 'set element 1 should be a number');
+  assert.ok(!one.scopes.includes('meta.attribute.delphi'), one.scopes.join(' '));
 });
