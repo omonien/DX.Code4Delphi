@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.6] - 2026-10-05
+
+### Changed
+
+- README banner title updated to **DX.Code4Delphi**; footer line uses a middle
+  dot instead of an em dash. Editable sources: `media/banner.svg` and
+  `media/banner-icon.png`.
+
 ## [2.0.5] - 2026-10-05
 
 ### Changed
