@@ -2,22 +2,58 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Delphi",
   "scopeName": "source.delphi",
-  "fileTypes": ["pas", "pp", "dpr", "dpk", "inc", "p", "int"],
+  "fileTypes": [
+    "pas",
+    "pp",
+    "dpr",
+    "dpk",
+    "inc",
+    "p",
+    "int"
+  ],
   "patterns": [
-    { "include": "#compiler-directives" },
-    { "include": "#comments" },
-    { "include": "#strings" },
-    { "include": "#char-codes" },
-    { "include": "#numbers" },
-    { "include": "#attributes" },
-    { "include": "#type-parameters" },
-    { "include": "#type-declarations" },
-    { "include": "#method-declarations" },
-    { "include": "#keywords" },
-    { "include": "#types" },
-    { "include": "#builtin-functions" },
-    { "include": "#operators" },
-    { "include": "#punctuation" }
+    {
+      "include": "#compiler-directives"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#char-codes"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#attributes"
+    },
+    {
+      "include": "#type-parameters"
+    },
+    {
+      "include": "#type-declarations"
+    },
+    {
+      "include": "#method-declarations"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#builtin-functions"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#punctuation"
+    }
   ],
   "repository": {
     "compiler-directives": {
@@ -117,14 +153,36 @@
       ]
     },
     "attributes": {
-      "begin": "(?<![A-Za-z0-9_\\]\\)])\\[([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)?)",
+      "name": "meta.attribute.delphi",
+      "begin": "(?<![A-Za-z0-9_\\]\\)])(\\[)\\s*([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)?)",
       "beginCaptures": {
         "1": {
+          "name": "punctuation.definition.annotation.begin.delphi"
+        },
+        "2": {
           "name": "entity.other.attribute-name.delphi"
         }
       },
-      "end": "\\]",
-      "name": "meta.attribute.delphi"
+      "end": "(\\])",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.annotation.end.delphi"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#strings"
+        },
+        {
+          "include": "#char-codes"
+        },
+        {
+          "include": "#numbers"
+        }
+      ]
     },
     "type-parameters": {
       "match": "<[A-Za-z_][A-Za-z0-9_]*(?:\\s*,\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*:\\s*[A-Za-z_][A-Za-z0-9_]*)?>",
@@ -140,15 +198,23 @@
         {
           "match": "^\\s*([A-Za-z_][A-Za-z0-9_]*)(<[^>]+>)?\\s*=\\s*(packed\\s+)?(class|dispinterface|interface|record|object|helper)\\b",
           "captures": {
-            "1": { "name": "entity.name.type.delphi" },
-            "2": { "name": "entity.name.type.delphi" },
-            "4": { "name": "storage.type.delphi" }
+            "1": {
+              "name": "entity.name.type.delphi"
+            },
+            "2": {
+              "name": "entity.name.type.delphi"
+            },
+            "4": {
+              "name": "storage.type.delphi"
+            }
           }
         },
         {
           "match": "\\btype\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=",
           "captures": {
-            "1": { "name": "entity.name.type.delphi" }
+            "1": {
+              "name": "entity.name.type.delphi"
+            }
           }
         }
       ]
@@ -158,25 +224,43 @@
         {
           "match": "\\b(class\\s+|sealed\\s+|static\\s+)?(procedure|function|constructor|destructor|operator)\\s+([A-Za-z_][A-Za-z0-9_]*\\s*(?:<[^>]+>)?)(\\.)([A-Za-z_][A-Za-z0-9_]*)",
           "captures": {
-            "1": { "name": "storage.modifier.delphi" },
-            "2": { "name": "storage.type.function.delphi" },
-            "3": { "name": "entity.name.type.delphi" },
-            "4": { "name": "punctuation.accessor.delphi" },
-            "5": { "name": "entity.name.function.delphi" }
+            "1": {
+              "name": "storage.modifier.delphi"
+            },
+            "2": {
+              "name": "storage.type.function.delphi"
+            },
+            "3": {
+              "name": "entity.name.type.delphi"
+            },
+            "4": {
+              "name": "punctuation.accessor.delphi"
+            },
+            "5": {
+              "name": "entity.name.function.delphi"
+            }
           }
         },
         {
           "match": "\\b(class\\s+|sealed\\s+|static\\s+)?(procedure|function|constructor|destructor|operator)\\s+([A-Za-z_][A-Za-z0-9_]*)",
           "captures": {
-            "1": { "name": "storage.modifier.delphi" },
-            "2": { "name": "storage.type.function.delphi" },
-            "3": { "name": "entity.name.function.delphi" }
+            "1": {
+              "name": "storage.modifier.delphi"
+            },
+            "2": {
+              "name": "storage.type.function.delphi"
+            },
+            "3": {
+              "name": "entity.name.function.delphi"
+            }
           }
         },
         {
           "match": "\\bproperty\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
           "captures": {
-            "1": { "name": "entity.name.variable.property.delphi" }
+            "1": {
+              "name": "entity.name.variable.property.delphi"
+            }
           }
         }
       ]
@@ -186,7 +270,9 @@
         {
           "match": "(?<=[(,;]\\s*)(const|var|out)(?=\\s+[A-Za-z_])",
           "captures": {
-            "1": { "name": "storage.type.parameter.delphi" }
+            "1": {
+              "name": "storage.type.parameter.delphi"
+            }
           }
         },
         {

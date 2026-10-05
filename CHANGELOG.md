@@ -1,13 +1,32 @@
 # Changelog
 
-All notable changes to **Code4Delphi** are documented in this file.
+All notable changes to **DX.Code4Delphi** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [2.0.4] — 2026-08-19
+## [2.0.5] - 2026-10-05
+
+### Changed
+
+- Marketplace listing name is now **DX.Code4Delphi: Delphi Language Support**
+  (extension id `DeveloperExperts.code4delphi` unchanged). Homepage points to
+  https://www.developer-experts.net/en/code4delphi. README naming and wording
+  cleaned up (no em dashes, no emojis).
+
+### Fixed
+
+- **Custom attributes** such as `[Test]` and `[JsonName('x')]` are highlighted
+  distinctly from surrounding code. Attribute brackets get punctuation scopes;
+  attribute names use `entity.other.attribute-name.delphi`. Nested strings and
+  numbers inside attribute arguments keep their normal highlighting. Array
+  indexes and set constructors are still not treated as attributes. All four
+  bundled color schemes give attributes a dedicated color (Delphi Dark / Light
+  previously used the same color as plain identifiers). Fixes #3.
+
+## [2.0.4] - 2026-08-19
 
 ### Fixed
 

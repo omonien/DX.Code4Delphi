@@ -1,5 +1,5 @@
 {
-  "name": "Code4Delphi Turbo Pascal",
+  "name": "DX.Code4Delphi Turbo Pascal",
   "tokenColors": [
     {
       "scope": [
@@ -75,7 +75,9 @@
     {
       "scope": [
         "entity.other.attribute-name.delphi",
-        "meta.attribute.delphi"
+        "meta.attribute.delphi",
+        "punctuation.definition.annotation.begin.delphi",
+        "punctuation.definition.annotation.end.delphi"
       ],
       "settings": {
         "foreground": "#ffa8ff"
